@@ -1,0 +1,10 @@
+para compilar usar
+gcc pru.c -o pru -l curses
+
+gcc -c help.c
+esto genera help.o
+
+gcc -c pru.c
+esto genera pru.o
+
+gcc pru.o help.o -o pru

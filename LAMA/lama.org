@@ -1,0 +1,61 @@
+* PROYECTO LAMA para Gateway
+
+** Funciones del demonio anterior LAMA V1.5 en Slackware 12.0
+*** Posicion en disco
+    /root/omcexec
+
+*** Archivos temporales que genera
+**** /root/omcexec/tmp/omcexec.lock
+     - pid del demonio
+
+**** /root/omcexec/tmp/normal_fecha.dbs
+     - copia de Master.csv entre las fechas seleccionadas
+
+*** Archivos auxiliares
+**** /root/omcexec/Funcs_omcexecd
+
+        Funciones del demonio
+    
+        Para correrlo:
+        ./omcexecd
+        
+        Para verlo:
+        ps -ax
+        
+        Para ver conexiones:
+        tail -f omcexec.log
+        
+        Para ver comandos y errores:
+        tail -f errores.log
+        
+        Para testear seniales:
+        kill -HUP `cat tmp/omcexec.lock`
+        
+        Para terminar demonio:
+        kill `cat tmp/omcexec.lock`
+
+**** /root/omcexec/conexiones.log
+     - indica cantidad de conexiones actuales
+     - me imagino que para no tener mas de una simultanea
+
+**** /root/omcexec/errores.log
+     - errores en el funcionamiento
+
+**** /root/omcexec/seclama.log
+     - numero del pedido de LAMA empezando en 1 y creciendo siempre
+     - esto va arriba de todo en el archivo que genera la interface windows
+
+*** BashScript stop
+    #!/bin/bash
+    #
+    # busca el archivo lock en el temporal
+    # y termina el proceso
+    kill `cat tmp/omcexec.lock`
+
+
+
+** CSV files
+   https://github.com/JamesRamm/csv_parser
+
+   http://www.uitti.net/stephen/libccgi/libcsv.shtml
+

@@ -1,0 +1,17 @@
+* Aprenda como si etuviera en primero
+  http://www4.tecnun.es/es/ps/coleccion-aprenda-informatica.html#a4611
+
+* Ashley Mills - Lear to Program with C
+  https://www.youtube.com/watch?v=UILNmv2kFMc&list=PLCNJWVn9MJuPtPyljb-hewNfwEGES2oIW
+
+* cdecl - C gibberish <-> English
+  https://cdecl.org
+
+* comp.lang.c Frequently Asked Questions
+  http://c-faq.com
+
+* Linux Kernel Style Guide
+  https://www.kernel.org/doc/html/v4.10/process/coding-style.html
+  
+
+
