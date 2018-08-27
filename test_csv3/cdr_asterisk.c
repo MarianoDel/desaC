@@ -39,7 +39,8 @@ int AsteriskCDRProcessFile (char * input, char * output)
 #ifdef OUTPUT_IS_A_FILE
     FILE *outfile;    
 #endif
-    
+
+
     csv_init(&p, 0);    
     
     infile = fopen(input, "rb");
@@ -125,8 +126,42 @@ int AsteriskCDRProcessFile (char * input, char * output)
     return EXIT_SUCCESS;    
 }
 
+//toma la secuencia del lama desde un archivo que se define en
+//cdr_asterisk.h
+int AsteriskGetSecLama (void)
+{
+    char buf_file[128];
+    FILE * seclama_file;
+    int sequence = 0;
 
+    sprintf(buf_file, "%s/%s", ASTERISK_CDR_SECLAMA_DIR, ASTERISK_CDR_SECLAMA_FILE);
+    
+    seclama_file = fopen(buf_file, "r");
+    if (seclama_file == NULL) {
+        // fprintf(stderr, "Failed to open file %s: %s\n", buf_file, strerror(errno));
+        return -1;
+    }
 
+    fgets(buf_file, sizeof(buf_file), seclama_file);
+    sequence = atoi(buf_file);
+    fclose(seclama_file);
+    
+    if ((sequence < 0) || (sequence > 65000))
+        return -1;
+
+    sprintf(buf_file, "%s/%s", ASTERISK_CDR_SECLAMA_DIR, ASTERISK_CDR_SECLAMA_FILE);
+    seclama_file = fopen(buf_file, "w");
+    if (seclama_file == NULL) {
+        // fprintf(stderr, "Failed to open file %s: %s\n", buf_file, strerror(errno));
+        return -1;
+    }
+    
+    sprintf (buf_file, "%d", sequence + 1);
+    fputs (buf_file, seclama_file);
+    fclose(seclama_file);
+
+    return sequence;
+}
 
 //aparentemente es el wrapper del final de campo
 //tengo que editarlo segun lo que quiera ahi
@@ -190,7 +225,7 @@ void cb2 (int c, void *outfile)
 {
 #ifdef OUTPUT_IS_A_FILE
 
-    fprintf((FILE *) outfile, "%s,%s,%s,%s,%s\n",
+    fprintf((FILE *) outfile, "%22s,%22s,%s,%s,%s\n",
             cdr.abonado,
             cdr.destino,
             cdr.fecha_hora,

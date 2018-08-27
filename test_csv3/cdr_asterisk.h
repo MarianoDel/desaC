@@ -12,6 +12,8 @@
 
 //----------- Defines For Configuration -----------------
 #define ASTERISK_CDR_WORKING_TMP_DIR    "./tmp"
+#define ASTERISK_CDR_SECLAMA_FILE    "seclama.log"
+#define ASTERISK_CDR_SECLAMA_DIR    "."
 
 // #define ONLY_ONE_LINE_FOR_TEST
 #define OUTPUT_IS_A_FILE
@@ -57,7 +59,7 @@ typedef enum {
 
 //-- Exported Module Functions --------------------------
 int AsteriskCDRProcessFile (char * , char * );
-
+int AsteriskGetSecLama (void);
 
 #endif    //_CDR_ASTERISK_H_
 
