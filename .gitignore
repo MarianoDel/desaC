@@ -4,4 +4,4 @@ GTAGS
 GRTAGS
 GPATH
 libcsv
-#*.o
+*.o
