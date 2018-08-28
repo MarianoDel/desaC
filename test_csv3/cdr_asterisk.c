@@ -20,6 +20,7 @@
 static int put_comma = 0;
 static int campos_por_linea = 0;
 static int lineas = 0;
+static int processed_lines = 0;
 
 
 //-- Private Module Functions Declarations ---------------
@@ -35,12 +36,18 @@ int AsteriskCDRProcessFile (char * input, char * output)
     size_t i;
     struct csv_parser p;
     FILE *infile;
+    int seq = 0;
 
 #ifdef OUTPUT_IS_A_FILE
     FILE *outfile;    
 #endif
 
 
+    seq = AsteriskGetSecLama();
+    
+    if (seq == -1)
+        exit(EXIT_FAILURE);
+        
     csv_init(&p, 0);    
     
     infile = fopen(input, "rb");
@@ -54,7 +61,12 @@ int AsteriskCDRProcessFile (char * input, char * output)
     if (outfile == NULL) {
         fprintf(stderr, "Failed to open file %s: %s\n", output, strerror(errno));
         exit(EXIT_FAILURE);
-    }    
+    }
+
+    processed_lines = 0;
+    //C TOT,622,SECUENCIA
+    sprintf(buf, "C TOT,%d,SECUENCIA\r\n", seq);
+    fputs(buf, outfile);
 #endif
     
     while (fgets(buf, BUFF_SIZE, infile) != NULL)        
@@ -103,9 +115,14 @@ int AsteriskCDRProcessFile (char * input, char * output)
         }
 #endif
     }
-#endif
+#endif    //ONLY_ONE_LINE_FOR_TEST
 
 #ifdef OUTPUT_IS_A_FILE
+    //cierro el ultimo renglon
+    //,FIN,622
+    sprintf(buf, ",FIN,%d\r\n", processed_lines);
+    fputs(buf, outfile);    
+
     csv_fini(&p, cb1, cb2, outfile);
 #else
     csv_fini(&p, cb1, cb2, NULL);
@@ -170,10 +187,10 @@ int AsteriskGetSecLama (void)
 //outfile es el stream o file que quiera usar
 void cb1 (void *s, size_t i, void *outfile)
 {
-    if (put_comma)
-        putc(',', stdout);
-    csv_fwrite(stdout, s, i);
-    put_comma = 1;
+    // if (put_comma)
+    //     putc(',', stdout);
+    // csv_fwrite(stdout, s, i);
+    // put_comma = 1;
 
     switch (campos_por_linea)
     {
@@ -224,30 +241,61 @@ void cb1 (void *s, size_t i, void *outfile)
 void cb2 (int c, void *outfile)    
 {
 #ifdef OUTPUT_IS_A_FILE
+    char fecha [20];
+    char hora [20];
 
-    fprintf((FILE *) outfile, "%22s,%22s,%s,%s,%s\n",
+    //hago ciertos chequeos para ver si graba el llamado en el LAMA.CAL
+    //primero veo si fue contestado
+    if (strncmp(cdr.estado, "ANSWERED", sizeof("ANSWERED") - 1) != 0)
+    {
+        FlushCDR();
+        campos_por_linea = 0;
+        lineas++;
+        return;
+    }
+
+    //me fijo si el tiempo de comunicacion es mayor a 0
+    int tiempo_comm = atoi(cdr.segundos);
+    if (tiempo_comm < 1)
+    {
+        FlushCDR();
+        campos_por_linea = 0;
+        lineas++;
+        return;        
+    }
+    //tengo que separar la fecha y la hora en campos distintos
+    char * space_chr = strchr (cdr.fecha_hora, ' ');
+
+    if (space_chr != NULL)
+    {
+        int pos = space_chr - cdr.fecha_hora;
+        // int pos = space_chr - &cdr.fecha_hora;
+        memset(fecha, '\0', sizeof(fecha));
+        strncpy(fecha, cdr.fecha_hora, pos);
+        strcpy(hora, (cdr.fecha_hora + pos + 1));
+    }
+    
+    fprintf((FILE *) outfile, "C TOT,%s,%s,%s,%s,%s,1,1\r\n",
             cdr.abonado,
             cdr.destino,
-            cdr.fecha_hora,
-            cdr.segundos,
-            cdr.estado);
+            fecha,
+            hora,
+            cdr.segundos);
+
+    // fprintf((FILE *) outfile, "C TOT,%s,%s,%s,%s,%s,%s,1,1\r\n",
+    //         cdr.abonado,
+    //         cdr.destino,
+    //         fecha,
+    //         hora,
+    //         cdr.segundos,
+    //         cdr.estado);
     
+    processed_lines++;
 #endif
     
-    put_comma = 0;
-    putc('\n', stdout);
-    printf("campos: %d lineas: %d\n", campos_por_linea, lineas);
-
-    printf(" abonado: %s\n", cdr.abonado);
-    printf(" destino: %s\n", cdr.destino);
-    printf(" fecha_hora: %s\n", cdr.fecha_hora);
-    printf(" segundos: %s\n", cdr.segundos);
-    printf(" estado: %s\n", cdr.estado);    
-
     FlushCDR();
     campos_por_linea = 0;
     lineas++;
-
 }
 
 void FlushCDR (void)
