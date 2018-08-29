@@ -15,3 +15,7 @@
   
 
 
+* Sockets IBM
+  https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.1.0/com.ibm.zos.v2r1.hala001/toc.htm
+* Sockets otro mejor
+  http://www.cs.rpi.edu/~moorthy/Courses/os98/Pgms/socket.html

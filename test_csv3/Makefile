@@ -31,6 +31,7 @@ SRC = main.c
 SRC += libcsv.c
 SRC += cdr_omc.c
 SRC += cdr_asterisk.c
+SRC += server_tcp.c
 
 
 OBJS = $(SRC:.c=.o)
