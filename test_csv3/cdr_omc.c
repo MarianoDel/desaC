@@ -35,6 +35,31 @@
 int DiffTime (int, int, int, int, int, int);
 //-- Module Functions ---------------------------------
 
+//dates must be string DD/MM/YY
+int CreateCdrFromDates2 (char * first_date, char * last_date, char * dest_file)
+{
+    char fini [20];
+    char fend [20];    
+
+    bzero(fini, sizeof(fini));
+    strcpy(fini, "2000");
+    strncpy((fini + 2), (first_date + 6), 2);
+    strncpy((fini + 4), (first_date + 3), 2);
+    strncpy((fini + 6), (first_date), 2);    
+
+    bzero(fend, sizeof(fend));
+    strcpy(fend, "2000");
+    strncpy((fend + 2), (last_date + 6), 2);
+    strncpy((fend + 4), (last_date + 3), 2);
+    strncpy((fend + 6), (last_date), 2);    
+
+    // printf ("dest_file: %s\n", dest_file);
+    // printf ("fini: %s, fend: %s\n", fini, fend);
+    // return 0;
+    
+    return CreateCdrFromDates (fini, fend, dest_file);          
+}
+
 //dates must be string YYYYMMDD
 int CreateCdrFromDates (char * first_date, char * last_date, char * dest_file)
 {

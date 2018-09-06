@@ -21,6 +21,7 @@
 
 //-- Exported Module Functions --------------------------
 int CreateCdrFromDates (char *, char *, char *);
+int CreateCdrFromDates2 (char *, char *, char *);
 
 #endif    //_CDR_OMC_H_
 

@@ -38,10 +38,7 @@ int AsteriskCDRProcessFile (char * input, char * output)
     FILE *infile;
     int seq = 0;
 
-#ifdef OUTPUT_IS_A_FILE
     FILE *outfile;    
-#endif
-
 
     seq = AsteriskGetSecLama();
     
@@ -56,7 +53,6 @@ int AsteriskCDRProcessFile (char * input, char * output)
         exit(EXIT_FAILURE);
     }
 
-#ifdef OUTPUT_IS_A_FILE
     outfile = fopen(output, "w");
     if (outfile == NULL) {
         fprintf(stderr, "Failed to open file %s: %s\n", output, strerror(errno));
@@ -67,12 +63,11 @@ int AsteriskCDRProcessFile (char * input, char * output)
     //C TOT,622,SECUENCIA
     sprintf(buf, "C TOT,%d,SECUENCIA\r\n", seq);
     fputs(buf, outfile);
-#endif
     
     while (fgets(buf, BUFF_SIZE, infile) != NULL)        
     {
         i = strlen(buf);
-#ifdef OUTPUT_IS_A_FILE
+
         if (csv_parse(&p, buf, i, cb1, cb2, outfile) != i)
         {
             fprintf(stderr, "Error parsing file: %s\n", csv_strerror(csv_error(&p)));
@@ -80,14 +75,6 @@ int AsteriskCDRProcessFile (char * input, char * output)
             fclose(outfile);            
             exit(EXIT_FAILURE);
         }
-#else
-        if (csv_parse(&p, buf, i, cb1, cb2, NULL) != i)
-        {
-            fprintf(stderr, "Error parsing file: %s\n", csv_strerror(csv_error(&p)));
-            fclose(infile);
-            exit(EXIT_FAILURE);
-        }
-#endif
     }
 
 #ifdef ONLY_ONE_LINE_FOR_TEST
@@ -98,7 +85,7 @@ int AsteriskCDRProcessFile (char * input, char * output)
     // }
     {
         i = strlen(buf);
-#ifdef OUTPUT_IS_A_FILE
+
         if (csv_parse(&p, buf, i, cb1, cb2, outfile) != i)
         {
             fprintf(stderr, "Error parsing file: %s\n", csv_strerror(csv_error(&p)));
@@ -106,27 +93,15 @@ int AsteriskCDRProcessFile (char * input, char * output)
             fclose(outfile);            
             exit(EXIT_FAILURE);
         }
-#else
-        if (csv_parse(&p, buf, i, cb1, cb2, NULL) != i)
-        {
-            fprintf(stderr, "Error parsing file: %s\n", csv_strerror(csv_error(&p)));
-            fclose(infile);
-            exit(EXIT_FAILURE);
-        }
-#endif
     }
 #endif    //ONLY_ONE_LINE_FOR_TEST
 
-#ifdef OUTPUT_IS_A_FILE
     //cierro el ultimo renglon
     //,FIN,622
     sprintf(buf, ",FIN,%d\r\n", processed_lines);
     fputs(buf, outfile);    
 
     csv_fini(&p, cb1, cb2, outfile);
-#else
-    csv_fini(&p, cb1, cb2, NULL);
-#endif
     csv_free(&p);
 
     // if (ferror(infile)) {
@@ -135,13 +110,37 @@ int AsteriskCDRProcessFile (char * input, char * output)
     //     remove(argv[2]);
     //     exit(EXIT_FAILURE);
     // }
-#ifdef OUTPUT_IS_A_FILE
     fclose(outfile);
-#endif
     fclose(infile);
 
     return EXIT_SUCCESS;    
 }
+
+#ifdef MAX_NUMBER_OF_USERS
+//Procesa un archivo lama ya trabajado previamente por AsteriskCDRProcessFile()
+//y lo limita con la cantidad de usuarios
+int AsteriskCDRLimitUsers (char * input, char * output)
+{
+    //armo un vector de la cantidad de usuarios que permito y lo voy completando
+    //si llego a lenght_max, borro las entradas de los usuarios de la lista
+    long long int users [MAX_NUMBER_OF_USERS] = { 0 };
+
+    FILE *infile;
+    FILE *outfile;
+
+    infile = fopen(input, "r");
+    if (infile == NULL)
+        return -1;
+
+    outfile = fopen(output, "w");
+    if (outfile == NULL)
+        return -1;
+
+    //leo una linea de entrada cargo y veo el vector
+    //luego escribo una linea de salida
+    return 0;
+}
+#endif
 
 //toma la secuencia del lama desde un archivo que se define en
 //cdr_asterisk.h
@@ -240,7 +239,6 @@ void cb1 (void *s, size_t i, void *outfile)
 //tengo que editarlo segun lo que quiera ahi
 void cb2 (int c, void *outfile)    
 {
-#ifdef OUTPUT_IS_A_FILE
     char fecha [20];
     char hora [20];
 
@@ -291,7 +289,6 @@ void cb2 (int c, void *outfile)
     //         cdr.estado);
     
     processed_lines++;
-#endif
     
     FlushCDR();
     campos_por_linea = 0;

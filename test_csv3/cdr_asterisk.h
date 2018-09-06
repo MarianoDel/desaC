@@ -11,13 +11,19 @@
 #define _CDR_ASTERISK_H_
 
 //----------- Defines For Configuration -----------------
+//archivo donde se guarda el lama procesado antes de enviarse
+#define ASTERISK_CDR_LAMA_FILE          "lama.cal"
 #define ASTERISK_CDR_WORKING_TMP_DIR    "./tmp"
+
+//archivo que guarda los numeros de secuencia del ultimo lama generado
 #define ASTERISK_CDR_SECLAMA_FILE    "seclama.log"
 #define ASTERISK_CDR_SECLAMA_DIR    "."
 
-// #define ONLY_ONE_LINE_FOR_TEST
-#define OUTPUT_IS_A_FILE
+//archivo y limite de usuarios, para sin limite comentar la linea
+// #define MAX_NUMBER_OF_USERS    5
+#define ASTERISK_CDR_LAMA_USERS_FILE          "lama_users.cal"
 
+// #define ONLY_ONE_LINE_FOR_TEST
 
 //-- Exported Defines -----------------------------------
 #define CDR_FIELD_SIZE    40
@@ -59,6 +65,7 @@ typedef enum {
 
 //-- Exported Module Functions --------------------------
 int AsteriskCDRProcessFile (char * , char * );
+int AsteriskCDRLimitUsers (char *, char *);
 int AsteriskGetSecLama (void);
 
 #endif    //_CDR_ASTERISK_H_

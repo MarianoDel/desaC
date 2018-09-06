@@ -20,6 +20,7 @@
 
 //-- Exported Module Functions --------------------------
 int StartServerTCP (void);
+int ProcessReqTCP (char *, int);
 
 #endif    //_SERVER_TCP_H_
 
