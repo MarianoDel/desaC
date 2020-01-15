@@ -1,1 +1,330 @@
-../../C_Cplusplus/links.org
+* Aprenda como si estuviera en primero
+  http://www4.tecnun.es/es/ps/coleccion-aprenda-informatica.html#a4611
+
+* Ashley Mills - Lean to Program with C
+  https://www.youtube.com/watch?v=UILNmv2kFMc&list=PLCNJWVn9MJuPtPyljb-hewNfwEGES2oIW
+
+* Jacob Sorber - C and Computer Science
+  https://www.youtube.com/user/jms36086/videos
+
+* C Programming in Linux Tutorial
+  https://www.youtube.com/watch?v=n9IT5RAludA&list=PLypxmOPCOkHXbJhUgjRaV2pD9MJkIArhg&index=29
+
+* cdecl - C gibberish <-> English
+  https://cdecl.org
+
+* comp.lang.c Frequently Asked Questions
+  http://c-faq.com
+
+* Linux Kernel Style Guide
+  https://www.kernel.org/doc/html/v4.10/process/coding-style.html
+  
+* Sockets IBM
+  https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.1.0/com.ibm.zos.v2r1.hala001/toc.htm
+
+* Sockets otro mejor
+  http://www.cs.rpi.edu/~moorthy/Courses/os98/Pgms/socket.html
+
+* Buen codigo para protocolos - MQTT -
+  https://codepr.github.io/posts/sol-mqtt-broker
+
+
+* Algunas cosas adicionales del lenguaje y sus librerias
+** nm (busca funciones y variables en archivos objeto y ejecutables)
+   Do nm on the final executable or on the object files. All symbols labelled B, C, or D 
+   are global variables. Symbols labelled b or d are static variables that aren't global.
+   The symbol name is more or less directly the identifier in the program.
+   To find out which module defined the variable, run nm on the object files. 
+   One object file is going to have the variable listed as D or B, the others as U. 
+   If you link without -fno-common, you might also have common variables listed as C
+   where each module with this variable technically defines it. 
+   The compiler merges these definitions into one.
+
+** pkg-config (busca librerias en el sistema)
+   $ pkg-config --libs gsl
+   $ -lgsl -lgslcblas -lm        #parametro para incluir lib y libs de dependencia
+
+   $ pkg-config --cflags gsl
+   $                             #no necesito poner flags al compilador
+
+* ALGO SOBRE MACROS
+** Stringification - # -
+   - Convierte los argumentos de la macro a strings
+   - utilizar el operador #, el pre-procesador reemplaza el argumento de la macro por el texto literal
+
+*** Ejemplo
+    #define STR(X)    #X    //convierte X a un string poniendo "", es mas complejo, ver gcc stringification
+    #define foo 4
+    STR(foo)
+    ==> "foo"
+
+*** Si quiero conseguir el string del parametro de la macro debo usar dos niveles de macros
+    #define XSTR(X)    STR(X)
+    #define STR(X)    #X
+    #define foo 4
+    XSTR(foo)
+    ==> XSTR(4)
+    ==> STR(4)
+    ==> "4"
+
+** Concatenation - ## -
+   The string constant can be created with stringification, 
+   and the function name by concatenating the argument with _command. Here is how it is done:
+
+*** Ejemplo
+     #define COMMAND(NAME)  { #NAME, NAME ## _command }
+     
+     struct command commands[] =
+     {
+       COMMAND (quit),
+       COMMAND (help),
+       ...
+     };
+*** Expande a:
+    struct command commands[] =
+     {
+       { "quit", quit_command },
+       { "help", help_command },
+       ...
+     };
+
+** Correr solo el pre-procesador
+   - Use gcc -E to only run the preprocessor part
+
+*** Ejemplo
+    gcc -E main.c -o main_pre.i
+    arm-none-eabi-gcc -E -I../cmsis_boot -I../cmsis_core gpio.c -o gpio.i
+
+** Multiline Macros, ended with semicolon
+*** Ejemplo de definicion
+   #define SKIP_SPACES(p, limit)     \
+     do { char *lim = (limit);         \
+          while (p < lim) {            \
+            if (*p++ != ' ') {         \
+              p--; break; }}}          \
+     while (0)
+
+     -el do { } while(0) externo me permite llamar la macro como una funcion en codigo
+
+*** Ejemplo de llamada
+    SKIP_SPACES (p, lim); //expands into do {...} while (0);
+
+
+** // Stringify Utils --------------------
+   #define STRING_CONCAT(str1,str2) #str1 " " #str2
+   #define xstr(s) str(s)
+   #define str(s) #s
+   
+   #define CURRENT_MODE        Current Mode for Hwd ver 1.2\n
+   #define WITH_OVER           WITH_OVERCURRENT_SHUTDOWN\n
+   
+   
+   #define FEATURES STRING_CONCAT(Current Mode for Hwd ver 1.2\n, WITH_OVERCURRENT_SHUTDOWN\n)
+   #define FEATURES_2 STRING_CONCAT(xstr(CURRENT_MODE), xstr(WITH_OVER))
+
+** VARAGS MACROS
+#include <stdio.h>
+
+#define INFO    1
+#define ERR 2
+#define STD_OUT stdout
+#define STD_ERR stderr
+
+#define LOG_MESSAGE(prio, stream, msg, ...) do {\
+                        char *str;\
+                        if (prio == INFO)\
+                            str = "INFO";\
+                        else if (prio == ERR)\
+                            str = "ERR";\
+                        fprintf(stream, "[%s] : %s : %d : "msg" \n", \
+                                str, __FILE__, __LINE__, ##__VA_ARGS__);\
+                    } while (0)
+
+int main(void)
+{
+    char *s = "Hello";
+
+        /* display normal message */
+    LOG_MESSAGE(ERR, STD_ERR, "Failed to open file");
+
+    /* provide string as argument */
+    LOG_MESSAGE(INFO, STD_OUT, "%s Geeks for Geeks", s);
+
+    /* provide integer as arguments */
+    LOG_MESSAGE(INFO, STD_OUT, "%d + %d = %d", 10, 20, (10 + 20));
+
+    return 0;
+}
+
+//Compile and run the above program, it produces below result.
+
+  [narendra@/media/partition/GFG]$ ./variable_length
+  [ERR] : variable_length.c : 26 : Failed to open file
+  [INFO] : variable_length.c : 27 : Hello Geeks for Geeks
+  [INFO] : variable_length.c : 28 : 10 + 20 = 30
+  [narendra@/media/partition/GFG]$
+
+** Buen codigo para Macros Listas y OBJETOS
+  https://github.com/gurugio/book_cprogramming
+
+** Function Like Macros and Macros Generating Functions
+*** Macros Generating Functions
+#define DEF_DYNARRAY_H(TYPE, NAME)\
+	typedef struct NAME{\
+		TYPE *data;\
+		size_t size;\
+		size_t capacity;\
+	} NAME;\
+\
+	int NAME##_init(NAME *arr, size_t size);\
+        //and so on defining every function prototype
+
+#define CUTILS_DEF_DYNARRAY_C(TYPE, NAME)\
+	int NAME##_init(NAME *arr, size_t size){\
+		arr->data = malloc(sizeof(TYPE)*size);\
+		if(arr->data == NULL){\
+			return RET_NOMEM;\
+		}\
+		arr->capacity = size;\
+		arr->size = 0;\
+\
+		return RET_OK;\
+	}\
+        //and so on for every function that the H macro defines
+
+*** Functions like Macros
+#define dynarray(TYPE)\
+    struct{\
+        TYPE *data;\
+        size_t size;\
+        size_t capacity;\
+    }
+#define dynarray_init(ARR, COUNT)\
+    ARR.data = malloc(sizeof(*data) * count);\
+    if(ARR.data != NULL){\
+        ARR.size = 0;\
+        ARR.capacity = count;\
+    }\
+    else{\
+        /*do something about it idk*/\
+    }
+
+* Void pointers
+  When you want use a void pointer (rather than just assigning memory to it)
+  you need to cast it to something non-void first. e.g. instead of:
+
+  data->ptr[i]->y = 9.0;
+  You need to do something like:
+
+  Point3D *p = (Point3D *) data->ptr;
+  p[i].y = 9.0;
+  It's the same when you want to access it.
+
+* Functions Pointers
+** Lo que necesito
+   - para usar punteros a funciones lo que necesito es:
+     1. puntero con la firma de las funciones que puede llamar
+     2. funciones a llamar que respeten la firma
+     3. Asignar el puntero a alguna funcion
+     4. alguna posicion del codigo que llame al puntero
+
+*** Puntero
+    - con firma a funciones que toman 2 int y devuelven 1 int
+      int (* ptF) (int, int);
+
+*** Funciones que pueden ser llamadas
+    - debe coincidir con la firma del puntero
+      int Restar (int a, int b);
+
+*** Asignacion del puntero
+    - puedo asignar con el nombre de la funcion o con su direccion, es lo mismo
+      ptF = Restar;
+      ptF = &Restar;
+
+*** Codigo que llama
+    - en la parte del codigo que lo llama
+      resultado = ptF (100, 50);
+      resultado = *(ptF) (100, 50);
+     
+    
+* Array inicialization
+** Selecting each element
+   unsigned int vector [4] = { 1, 2, 3, 4};
+
+   unsigned int vector [] = { 1, 2, 3, 4};    //cuatro posiciones tambien
+
+** All elements at once
+   unsigned int vector [4] = { 0 };    //solo funciona para el 0
+
+   unsigned int vector [4] = {[0 ... 3] = 5};    //solo en gcc
+
+   unsigned int vector [] = {[0 ... 3] = 5};    //esto funciona??
+
+   unsigned short input [TEST_LENGTH] = {[0 ... (TEST_LENGTH - 1)] =  900 };
+
+* Compiler and Linker Options & Code Analisys
+  https://interrupt.memfault.com/blog/best-and-worst-gcc-clang-compiler-flags
+
+  https://interrupt.memfault.com/blog/code-size-optimization-gcc-flags
+
+  https://interrupt.memfault.com/best-firmware-size-tools
+
+* Code Analisys
+** Uso del stack
+   - compilar con opcion -fstack_size
+   - se genera un archivo *.su por cada archivo compilado
+   - static es el tamanio que toma el stack, dynamic no se puede determinar
+
+** Tamanio del programa en memoria
+   - generalmente con arm-none-eabi-size file.elf
+
+*** Interpretacion de los resultados
+    - text tamanio del codigo
+    - data variables inicializadas a algun valor
+    - bss variables inicializadas a 0
+
+    - Tamanio total en Flash = text + data
+      
+** Multiple Definitions - Rehuso de nombres globales
+   - si en dos archivos uso por error el mismo nombre de variable 
+     el archivo usa la global o la externa?
+   - compilando con -fno-common puede ver el error
+
+** Tamanio de codigo
+   arm-none-eabi-nm --print-size --size-sort --radix=d -l Template_F030_rom.elf 
+
+   arm-none-eabi-nm --print-size --size-sort --radix=d Template_F030_rom.elf 
+
+*** from man nm  sorted by use
+   "T"
+   "t" The symbol is in the text (code) section.
+
+   "D"
+   "d" The symbol is in the initialized data section.
+
+   "B"
+   "b" The symbol is in the uninitialized data section (known as BSS).
+
+   "W"
+   "w" The symbol is a weak symbol that has not been specifically
+   tagged as a weak object symbol.  When a weak defined symbol is
+   linked with a normal defined symbol, the normal defined symbol
+   is used with no error.  When a weak undefined symbol is linked
+   and the symbol is not defined, the value of the symbol is
+   determined in a system-specific manner without error.  On some
+   systems, uppercase indicates that a default value has been
+   specified.
+
+
+
+
+* VER ARCHIVOS HEX - BINARIOS
+** xxd
+   $ xxd mem.bin
+
+* PASAR ARCHIVOS iHEX A BINARIOS
+** Con arm-none-eabi-objcopy
+   objcopy -I ihex Demo.hex -O binary Demo.bin
+
+* PASAR DE BINARIOS A ARM ASSEMBLER
+  arm-none-eabi-objdump -D -EL -bbinary -marm LPC2292_UP_NO_1.bin > LPC2292_UP_NO_1.s
