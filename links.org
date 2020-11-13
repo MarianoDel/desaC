@@ -295,6 +295,8 @@ int main(void)
 
    arm-none-eabi-nm --print-size --size-sort --radix=d Template_F030_rom.elf 
 
+   arm-none-eabi-nm -S --size-sort -s Template_F050_rom.elf
+
 *** from man nm  sorted by use
    "T"
    "t" The symbol is in the text (code) section.
@@ -317,6 +319,61 @@ int main(void)
 
 
 
+** Complejidad de las Funciones
+*** pmccabe
+    pmccabe  -  calculate  McCabe cyclomatic complexity or non-commented line counts for C and
+    C++ programs
+
+    pmccabe *.c | sort -nr | head -10
+
+*** complexity
+    Measure complexity of C source
+
+    complexity --histogram --score --thresh=3 '*.c'
+
+*** npath
+
+*** gcc -fstack-usage
+    A unit compiled with -fstack-usage will generate an extra file that specifies the 
+    maximum amount of stack used, on a per-function basis. 
+    The file has the same basename as the target object file with a .su extension. 
+    Each line of this file is made up of three fields:
+    - The name of the function.
+    - A number of bytes.
+    - One or more qualifiers: static, dynamic, bounded.
+
+    -Wstack-usage warning en uso excesivo del stack
+
+** Mapa de funciones llamadas gnu cflow
+   GNU cflow analyzes a collection of C source files and prints a graph 
+   charting control flow within the program.
+
+*** debo indicarle los archivos de codigo
+     cflow -T src/main.c src/uart.c
+   
+* file descriptor leak
+** fd for processes
+   /proc/<pid>/fd
+
+** type of
+   ls -ltr
+
+** con valgrind
+   valgrind --track-fds=yes ./program
+
+   lsof will show what they're connected to, which will be a big help.
+
+
+
+* shared libs used by executable
+** ldd muestra las librerias que utiliza
+   $ ldd /bin/ls
+
+* Reverse Engg Code
+  - No probe nada de estos dos, uno es libre el otro tiene version gratuita
+    https://ghidra-sre.org/InstallationGuide.html
+
+    https://www.hex-rays.com/products/ida/
 
 * VER ARCHIVOS HEX - BINARIOS
 ** xxd
@@ -328,3 +385,26 @@ int main(void)
 
 * PASAR DE BINARIOS A ARM ASSEMBLER
   arm-none-eabi-objdump -D -EL -bbinary -marm LPC2292_UP_NO_1.bin > LPC2292_UP_NO_1.s
+
+* ANSI Colors
+** Para cambiar el color de la salida por consola
+*** 8 Colores ANSI + 8 con *bold*
+   - printf("\033[0;31m"); //Set the text to the color red
+   - printf("Hello\n"); //Display Hello in red
+   - printf("\033[0m"); //Resets the text to default color
+   - Escape is: \033
+   - Color code is: [0;31m
+
+*** Lista de colores
+    - [0;31m	Red
+    - [1;31m	Bold Red
+    - [0;32m	Green
+    - [1;32m	Bold Green
+    - [0;33m	Yellow
+    - [01;33m	Bold Yellow
+    - [0;34m	Blue
+    - [1;34m	Bold Blue
+    - [0;35m	Magenta
+    - [1;35m	Bold Magenta
+    - [0;36m	Cyan
+    - [1;36m	Bold Cyan
