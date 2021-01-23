@@ -317,8 +317,6 @@ int main(void)
    systems, uppercase indicates that a default value has been
    specified.
 
-
-
 ** Complejidad de las Funciones
 *** pmccabe
     pmccabe  -  calculate  McCabe cyclomatic complexity or non-commented line counts for C and
@@ -344,6 +342,17 @@ int main(void)
 
     -Wstack-usage warning en uso excesivo del stack
 
+*** Lizard
+    Script python que revisa el codigo
+    https://pypi.org/project/lizard/
+
+    - pip3 install lizard
+    - lizard src    #busca en todos los archivos de codigo y hace el diagnostico
+
+*** OCLint
+    programa que revisa el codigo mas complejo que lizard
+
+
 ** Mapa de funciones llamadas gnu cflow
    GNU cflow analyzes a collection of C source files and prints a graph 
    charting control flow within the program.
@@ -351,6 +360,66 @@ int main(void)
 *** debo indicarle los archivos de codigo
      cflow -T src/main.c src/uart.c
    
+* Code Analisys - timings -
+** Timing with clock
+   - Es el tiempo insumido por el CPU para ejecutar la funcion
+
+#include <stdio.h>
+#include <time.h>       // for clock_t, clock(), CLOCKS_PER_SEC
+#include <unistd.h>     // for sleep()
+ 
+// main function to find the execution time of a C program
+int main()
+{
+    // to store execution time of code
+    double time_spent = 0.0;
+ 
+    clock_t begin = clock();
+ 
+    // do some stuff here
+    sleep(3);
+ 
+    clock_t end = clock();
+ 
+    // calculate elapsed time by finding difference (end - begin) and
+    // dividing the difference by CLOCKS_PER_SEC to convert to seconds
+    time_spent += (double)(end - begin) / CLOCKS_PER_SEC;
+ 
+    printf("Time elpased is %f seconds", time_spent);
+ 
+    return 0;
+}
+
+** Timing with time
+   - tiempo real transcurrido desde el comienzo de la funcion
+
+#include <stdio.h>
+#include <time.h>       // for time()
+#include <unistd.h>     // for sleep()
+ 
+// main function to find the execution time of a C program
+int main()
+{
+    time_t begin = time(NULL);
+ 
+    // do some stuff here
+    sleep(3);
+ 
+    time_t end = time(NULL);
+ 
+    // calculate elapsed time by finding difference (end - begin)
+    printf("Time elpased is %d seconds", (end - begin));
+ 
+    return 0;
+}
+
+
+
+
+
+
+
+
 * file descriptor leak
 ** fd for processes
    /proc/<pid>/fd
@@ -362,8 +431,6 @@ int main(void)
    valgrind --track-fds=yes ./program
 
    lsof will show what they're connected to, which will be a big help.
-
-
 
 * shared libs used by executable
 ** ldd muestra las librerias que utiliza
@@ -408,3 +475,14 @@ int main(void)
     - [1;35m	Bold Magenta
     - [0;36m	Cyan
     - [1;36m	Bold Cyan
+
+* GTK GUI Development
+** Para levantar archivos XML? desde glade
+   - https://developer.gnome.org/gtk3/stable/ch01s03.html
+   - si cuando abro el archivo no aparece, seleccionar window1 en el panel de
+     la derecha.
+
+** Para dibujar se utiliza cairo
+   - https://www.cairographics.org/tutorial/
+
+
