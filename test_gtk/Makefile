@@ -32,10 +32,13 @@ LIBS = `pkg-config --libs gtk+-3.0`    #the gtk lib
 # List here the sources files
 # SRC = main.c
 # SRC = main2.c
-SRC = main3.c
+# SRC = main3.c
+# SRC = main4.c
+# SRC = main5.c
 # SRC = main_glade.c
 # SRC = main_glade_lcd.c
 # SRC = main_glade_lcd2.c
+SRC = main_glade_lcd3.c
 # SRC = main_pixel.c    #para gtk2
 # SRC += libcsv.c
 

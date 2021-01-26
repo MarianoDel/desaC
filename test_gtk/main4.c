@@ -15,7 +15,11 @@ clear_surface (void)
   cairo_set_source_rgb (cr, 0.2, 1, 1);    //entre 0 y 1
   cairo_paint (cr);
 
-  cairo_destroy (cr);
+    int w = cairo_image_surface_get_width(surface);
+    int h = cairo_image_surface_get_height(surface);
+    g_print("Suface width: %d height: %d\n", w, h);
+
+    cairo_destroy (cr);
 }
 
 /* Create a new surface of the appropriate size to store our scribbles */
@@ -31,6 +35,10 @@ configure_event_cb (GtkWidget         *widget,
                                                CAIRO_CONTENT_COLOR,
                                                gtk_widget_get_allocated_width (widget),
                                                gtk_widget_get_allocated_height (widget));
+
+    g_print("Configuring surface width: %d height: %d\n",
+            gtk_widget_get_allocated_width (widget),
+            gtk_widget_get_allocated_height (widget));
 
   /* Initialize the surface to white */
   clear_surface ();
