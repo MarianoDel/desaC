@@ -304,7 +304,10 @@ void get_lcd_patch_position (int row, int column, int * x, int * y)
         return;
     
     *x = COLUMN_START + column * (PATCH_WIDTH + 2);
-    *y = ROW_START + (PATCH_HEIGHT * row) + 4;
+    if (row)
+        *y = ROW_START + (PATCH_HEIGHT * row) + 4;
+    else
+        *y = ROW_START;
 }
 
 
@@ -313,7 +316,7 @@ static void clear_button_callback (void)
     int x = 0;
     int y = 0;
 
-    get_lcd_patch_position (1, 15, &x, &y);
+    get_lcd_patch_position (0, 0, &x, &y);
     g_print("patch on x: %d y: %d\n", x, y);
     draw_lcd_patch_from_cgrom (pix, x, y);
 
