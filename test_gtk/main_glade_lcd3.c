@@ -281,7 +281,7 @@ static void draw_lcd_patch_from_cgrom (GdkPixbuf * p, int x, int y)
     for (int j = 0; j < 8; j++)
     {
         row = y + j * (3 + 1);
-        uint8_t * vline = cgrom[47];
+        uint8_t * vline = cgrom[95];
         uint8_t line = *(vline + j);
         // uint8_t line = char_a[j];        
         uint8_t mask = 0;
