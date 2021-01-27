@@ -4,6 +4,7 @@
 
 #include <gtk/gtk.h>
 #include <stdint.h>
+#include "cgrom.h"
 
 
 typedef struct {
@@ -266,9 +267,12 @@ static void draw_lcd_patch_from_cgrom (GdkPixbuf * p, int x, int y)
     rgb_blank.B = 47;
 
     rgb_st rgb_fill;
-    rgb_fill.R = 255;
-    rgb_fill.G = 0;
-    rgb_fill.B = 0;
+    // rgb_fill.R = 255;
+    // rgb_fill.G = 0;
+    // rgb_fill.B = 0;
+    rgb_fill.R = 10;
+    rgb_fill.G = 10;
+    rgb_fill.B = 10;
 
     int col = 0;
     int row = 0;
@@ -277,7 +281,9 @@ static void draw_lcd_patch_from_cgrom (GdkPixbuf * p, int x, int y)
     for (int j = 0; j < 8; j++)
     {
         row = y + j * (3 + 1);
-        uint8_t line = char_a[j];
+        uint8_t * vline = cgrom[47];
+        uint8_t line = *(vline + j);
+        // uint8_t line = char_a[j];        
         uint8_t mask = 0;
         for (int i = 0; i < 5; i++)
         {
