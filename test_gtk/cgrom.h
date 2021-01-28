@@ -6,6 +6,9 @@
 #define __CGROM_H_
 #include <stdint.h>
 
+#define ALL_SYMBOLS_IN_CGROM    96
+#define LAST_SYMBOL_IN_CGROM    (ALL_SYMBOLS_IN_CGROM - 1)
+
 uint8_t s_space [8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 uint8_t s_exclamation [8] = {0x04, 0x04, 0x04, 0x04, 0x00, 0x00, 0x04, 0x00};
 uint8_t s_dquotes [8] = {0x0a, 0x0a, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -109,30 +112,30 @@ uint8_t s_larrow [8] = {0x00, 0x04, 0x02, 0x1f, 0x02, 0x04, 0x00, 0x00};
 uint8_t s_rarrow [8] = {0x00, 0x04, 0x08, 0x1f, 0x08, 0x04, 0x00, 0x00};
 
 
-uint8_t * cgrom [96] = {s_space, s_exclamation, s_dquotes, s_pound,
-                        s_dollar, s_percent, s_ampersand, s_quote,
-                        s_lparen, s_rparen, s_star, s_add,
-                        s_comma, s_subs, s_dot, s_div,
-                        s_zero, s_one, s_two, s_three,
-                        s_four, s_five, s_six, s_seven,
-                        s_eight, s_nine, s_ddot, s_dcomma,
-                        s_less, s_equal, s_great, s_question,
-                        s_att, s_aa, s_bb, s_cc, s_dd,
-                        s_ee, s_ff, s_gg, s_hh,
-                        s_ii, s_jj, s_kk, s_ll,
-                        s_mm, s_nn, s_oo, s_pp,
-                        s_qq, s_rr, s_ss, s_tt,
-                        s_uu, s_vv, s_ww, s_xx,
-                        s_yy, s_zz, s_lcorch, s_yen,
-                        s_rcorch, s_arrowup, s_underscore, s_backtick,
-                        s_a, s_b, s_c, s_d,
-                        s_e, s_f, s_g, s_h,
-                        s_i, s_j, s_k, s_l,
-                        s_m, s_n, s_o, s_p,
-                        s_q, s_r, s_s, s_t,
-                        s_u, s_v, s_w, s_x,
-                        s_y, s_z, s_lkey, s_bar,
-                        s_rkey, s_larrow, s_rarrow};
+uint8_t * cgrom [ALL_SYMBOLS_IN_CGROM] = {s_space, s_exclamation, s_dquotes, s_pound,
+                                          s_dollar, s_percent, s_ampersand, s_quote,
+                                          s_lparen, s_rparen, s_star, s_add,
+                                          s_comma, s_subs, s_dot, s_div,
+                                          s_zero, s_one, s_two, s_three,
+                                          s_four, s_five, s_six, s_seven,
+                                          s_eight, s_nine, s_ddot, s_dcomma,
+                                          s_less, s_equal, s_great, s_question,
+                                          s_att, s_aa, s_bb, s_cc, s_dd,
+                                          s_ee, s_ff, s_gg, s_hh,
+                                          s_ii, s_jj, s_kk, s_ll,
+                                          s_mm, s_nn, s_oo, s_pp,
+                                          s_qq, s_rr, s_ss, s_tt,
+                                          s_uu, s_vv, s_ww, s_xx,
+                                          s_yy, s_zz, s_lcorch, s_yen,
+                                          s_rcorch, s_arrowup, s_underscore, s_backtick,
+                                          s_a, s_b, s_c, s_d,
+                                          s_e, s_f, s_g, s_h,
+                                          s_i, s_j, s_k, s_l,
+                                          s_m, s_n, s_o, s_p,
+                                          s_q, s_r, s_s, s_t,
+                                          s_u, s_v, s_w, s_x,
+                                          s_y, s_z, s_lkey, s_bar,
+                                          s_rkey, s_larrow, s_rarrow};
 
 #endif    /* __CGROM_H_ */
 

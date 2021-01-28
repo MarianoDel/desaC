@@ -32,9 +32,14 @@ static void put_pixel (GdkPixbuf *pixbuf,
 static void draw_lcd_patch (GdkPixbuf * p, int x, int y, rgb_st *);
 static void draw_mini_patch (GdkPixbuf * p, int x, int y, rgb_st *);
 static void fill_with_lcd_patches (GdkPixbuf * p);
-
+void get_lcd_patch_position (int row, int column, int * x, int * y);
+static void draw_lcd_patch_from_cgrom (GdkPixbuf * p, int line_pos, int cursor_pos, int symbol_index);
+    
 static void clear_button_callback (void);
 
+
+void Lcd_TransmitStr (char * line);
+void Lcd_SetDDRAM (uint8_t ddram);
 
 // Globals --------------------------------------------------------
 GdkPixbuf * pix;
@@ -258,8 +263,8 @@ static void put_pixel (GdkPixbuf *pixbuf,
 }
 
 
-uint8_t char_a [8] = { 0x04, 0x0e, 0x0e, 0x0e, 0x0e, 0x1f, 0x04, 0x00 };
-static void draw_lcd_patch_from_cgrom (GdkPixbuf * p, int x, int y)
+
+static void draw_lcd_patch_from_cgrom (GdkPixbuf * p, int line_pos, int cursor_pos, int symbol_index)
 {
     rgb_st rgb_blank;
     rgb_blank.R = 123;
@@ -274,6 +279,17 @@ static void draw_lcd_patch_from_cgrom (GdkPixbuf * p, int x, int y)
     rgb_fill.G = 10;
     rgb_fill.B = 10;
 
+    // sanity checks
+    if (symbol_index > LAST_SYMBOL_IN_CGROM)
+        return;
+    
+    if ((line_pos > 1) || (cursor_pos > 15))
+        return;
+
+    int x = 0;
+    int y = 0;
+    get_lcd_patch_position (line_pos, cursor_pos, &x, &y);    
+
     int col = 0;
     int row = 0;
 
@@ -281,7 +297,7 @@ static void draw_lcd_patch_from_cgrom (GdkPixbuf * p, int x, int y)
     for (int j = 0; j < 8; j++)
     {
         row = y + j * (3 + 1);
-        uint8_t * vline = cgrom[95];
+        uint8_t * vline = cgrom[symbol_index];
         uint8_t line = *(vline + j);
         // uint8_t line = char_a[j];        
         uint8_t mask = 0;
@@ -319,14 +335,64 @@ void get_lcd_patch_position (int row, int column, int * x, int * y)
 
 static void clear_button_callback (void)
 {
-    int x = 0;
-    int y = 0;
+    // for (int i = 0; i < 16; i++)
+    // {
+    //     draw_lcd_patch_from_cgrom (pix, 0, i, i);
+    // }
 
-    get_lcd_patch_position (0, 0, &x, &y);
-    g_print("patch on x: %d y: %d\n", x, y);
-    draw_lcd_patch_from_cgrom (pix, x, y);
+    // for (int i = 16; i < 32; i++)
+    // {
+    //     draw_lcd_patch_from_cgrom (pix, 1, i - 16, i);
+    // }
 
+    // for (int i = 32; i < 48; i++)
+    // {
+    //     draw_lcd_patch_from_cgrom (pix, 0, i - 32, i);
+    // }
+
+    Lcd_SetDDRAM(0x00);
+    Lcd_TransmitStr("     Hola Mundo!");
+
+    Lcd_SetDDRAM(0x40);
+    Lcd_TransmitStr("Chau Mundo!");
+    
+    
     gtk_image_set_from_pixbuf (GTK_IMAGE(imag1), pix);    
+}
+
+
+int lcd_line = 0;
+int lcd_cursor = 0;
+void Lcd_TransmitStr (char * line)
+{
+    while (*line != '\0')
+    {
+        //if we have the char in the list send it
+        if ((*line >= 32) && (*line < (LAST_SYMBOL_IN_CGROM + 32)))
+        {
+            draw_lcd_patch_from_cgrom (pix, lcd_line, lcd_cursor, (*line - 32));
+        }
+
+        //update the cursor
+        lcd_cursor++;
+        line++;
+    }
+}
+
+
+void Lcd_SetDDRAM (uint8_t ddram)
+{
+    if (ddram < 16)
+    {
+        lcd_line = 0;
+        lcd_cursor = ddram;
+    }
+
+    if ((ddram < (0x40 + 16)) && (ddram >= 0x40))
+    {
+        lcd_line = 1;
+        lcd_cursor = ddram - 0x40;
+    }
 }
 
 //--- end of file ---//
