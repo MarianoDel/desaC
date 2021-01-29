@@ -39,6 +39,8 @@ LIBS = `pkg-config --libs gtk+-3.0`    #the gtk lib
 # SRC = main_glade_lcd.c
 # SRC = main_glade_lcd2.c
 SRC = main_glade_lcd3.c
+SRC += lcd_utils.c
+SRC += menues.c
 # SRC = main_pixel.c    #para gtk2
 # SRC += libcsv.c
 

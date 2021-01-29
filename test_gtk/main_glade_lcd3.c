@@ -6,12 +6,26 @@
 #include <stdint.h>
 #include "cgrom.h"
 
+#include "lcd_utils.h"
+#include "menues.h"
+
 
 typedef struct {
     int R;
     int G;
     int B;
 } rgb_st;
+
+typedef struct {
+    int cursor;
+    int blink;
+    int blink_was_on;
+    int blink_last_index_line;
+    int blink_last_index_cursor;
+    unsigned char ddram_l1 [16];
+    unsigned char ddram_l2 [16];
+    
+} lcd_display_config_st;
 
 //-- Module Functions Declarations ---------------
 void end_program (GtkWidget *, gpointer);
@@ -35,13 +49,14 @@ static void fill_with_lcd_patches (GdkPixbuf * p);
 void get_lcd_patch_position (int row, int column, int * x, int * y);
 static void draw_lcd_patch_from_cgrom (GdkPixbuf * p, int line_pos, int cursor_pos, int symbol_index);
     
-static void clear_button_callback (void);
 gboolean Print_Callback (gpointer user_data);    //send data tests pourpose
 
+// LCD low level Functions, reimplemeted for hardware abstraction --------------
 void Lcd_TransmitStr (char * line);
 void Lcd_SetDDRAM (uint8_t ddram);
+void Lcd_Command (unsigned char);
 
-
+gboolean Lcd_Timeout_Callback (gpointer user_data);
 gboolean Test_Main_Loop (gpointer user_data);
 gboolean Test_Timeouts (gpointer user_data);
 
@@ -51,44 +66,46 @@ void set_button_function (void);
 
 
 // Functions for test declaration ----------------------------------------------
-// Switches actions
-typedef enum {
-    selection_none = 0,
-    selection_up,
-    selection_dwn,
-    selection_enter,
-    selection_back
+// // Switches actions
+// typedef enum {
+//     selection_none = 0,
+//     selection_up,
+//     selection_dwn,
+//     selection_enter,
+//     selection_back
 
-} sw_actions_t;
+// } sw_actions_t;
 
-// Answers expected
-typedef enum {
-    resp_ok = 0,
-    resp_continue,
-    resp_selected,
-    resp_change,
-    resp_change_all_up,
-    resp_working,
-    resp_error,
-    resp_need_to_save,
-    resp_finish,
-    resp_nok,
-    resp_timeout,
-    resp_ready,
-    resp_no_answer,
-    resp_save
+// // Answers expected
+// typedef enum {
+//     resp_ok = 0,
+//     resp_continue,
+//     resp_selected,
+//     resp_change,
+//     resp_change_all_up,
+//     resp_working,
+//     resp_error,
+//     resp_need_to_save,
+//     resp_finish,
+//     resp_nok,
+//     resp_timeout,
+//     resp_ready,
+//     resp_no_answer,
+//     resp_save
 
-} resp_t;
+// } resp_t;
 
-void LCD_ShowSelectv2Reset (void);
-resp_t LCD_ShowSelectv2 (const char * p_text, sw_actions_t sw_action);
+// void LCD_ShowSelectv2Reset (void);
+// resp_t LCD_ShowSelectv2 (const char * p_text, sw_actions_t sw_action);
+
 // End of Functions for test declaration ---------------------------------------
 
 
 // Globals --------------------------------------------------------
 GdkPixbuf * pix;
 GtkWidget *imag1;
-static cairo_surface_t *surface = NULL;
+// static cairo_surface_t *surface = NULL;
+lcd_display_config_st lcd_display;
 
 
 //-- Module Functions Definitions ---------------
@@ -119,6 +136,7 @@ int main(int argc, char *argv[])
     // gint mydata = 5;
     // gpointer data = (gpointer *) &mydata;
     // gdk_threads_add_timeout (1000, Print_Callback, data);
+    gdk_threads_add_timeout (1000, Lcd_Timeout_Callback, NULL);    
     gdk_threads_add_timeout (1, Test_Timeouts, NULL);
     gdk_threads_add_idle (Test_Main_Loop, NULL);    
     gtk_main();
@@ -126,6 +144,8 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+
+// This one is for internal tests only -----------------------------------------
 gint new_loop = 0;
 gint loops = 0;
 gboolean Print_Callback (gpointer user_data)
@@ -148,10 +168,10 @@ gboolean Print_Callback (gpointer user_data)
         g_print("ending loop\n");
         return FALSE;
     }
-
-    return TRUE;
     
+    return TRUE;
 }
+// End of internal tests -------------------------------------------------------
 
 
 
@@ -413,98 +433,79 @@ void get_lcd_patch_position (int row, int column, int * x, int * y)
 }
 
 
-static void clear_button_callback (void)
-{
-    // for (int i = 0; i < 16; i++)
-    // {
-    //     draw_lcd_patch_from_cgrom (pix, 0, i, i);
-    // }
 
-    // for (int i = 16; i < 32; i++)
-    // {
-    //     draw_lcd_patch_from_cgrom (pix, 1, i - 16, i);
-    // }
-
-    // for (int i = 32; i < 48; i++)
-    // {
-    //     draw_lcd_patch_from_cgrom (pix, 0, i - 32, i);
-    // }
-
-    Lcd_SetDDRAM(0x00);
-    Lcd_TransmitStr("     Hola Mundo!");
-
-    Lcd_SetDDRAM(0x40);
-    Lcd_TransmitStr("Chau Mundo!");
-    
-    
-    gtk_image_set_from_pixbuf (GTK_IMAGE(imag1), pix);    
-}
-
-
-int lcd_line = 0;
-int lcd_cursor = 0;
-void Lcd_TransmitStr (char * line)
-{
-    while (*line != '\0')
-    {
-        //if we have the char in the list send it
-        if ((*line >= 32) && (*line < (LAST_SYMBOL_IN_CGROM + 32)))
-        {
-            draw_lcd_patch_from_cgrom (pix, lcd_line, lcd_cursor, (*line - 32));
-        }
-
-        //update the cursor
-        lcd_cursor++;
-        line++;
-    }
-    gtk_image_set_from_pixbuf (GTK_IMAGE(imag1), pix);    
-}
-
-
-void Lcd_SetDDRAM (uint8_t ddram)
-{
-    if (ddram < 16)
-    {
-        lcd_line = 0;
-        lcd_cursor = ddram;
-    }
-
-    if ((ddram < (0x40 + 16)) && (ddram >= 0x40))
-    {
-        lcd_line = 1;
-        lcd_cursor = ddram - 0x40;
-    }
-}
 
 
 
 // Testing Function loop -------------------------------------------------------
 static GMutex mutex;
 
-uint8_t show_select_state = 0;
-uint16_t show_select_timer = 0;
+
+extern volatile unsigned short show_select_timer;
 sw_actions_t switch_actions = selection_none;
+
+parameters_typedef configurations;
 
 gboolean Test_Main_Loop (gpointer user_data)
 {
     resp_t resp = resp_continue;
     sw_actions_t actions = selection_none;
 
-    g_mutex_lock (&mutex);
-    if (switch_actions != selection_none)
-    {
-        actions = switch_actions;
-        switch_actions = selection_none;
-        g_print("new action: %d\n", actions);
-    }
-    g_mutex_unlock (&mutex);
+    // g_mutex_lock (&mutex);
+    // if (switch_actions != selection_none)
+    // {
+    //     actions = switch_actions;
+    //     switch_actions = selection_none;
+    //     g_print("new action: %d\n", actions);
+    // }
+    // g_mutex_unlock (&mutex);
     
-    resp = LCD_ShowSelectv2 ("Prueba display LCD", actions);
+    // resp = LCD_ShowSelectv2 ("Prueba display LCD", actions);
 
-    if (resp == resp_finish)
-        return FALSE;
+    // if (resp == resp_selected)
+    //     g_print ("This item was selected\n");
+
+    // if (resp == resp_change)
+    //     g_print ("Change to new menu DWN\n");
+
+    // if (resp == resp_change_all_up)
+    //     g_print ("Change to new menu UP\n");
+    
+    // if (resp == resp_finish)
+    //     return FALSE;
+    
+    // return TRUE;
+
+    // resp = LCD_ShowBlink ("  Entrando en   ",
+    //                       "Config Predeterm",
+    //                       3,
+    //                       BLINK_DIRECT);
+
+    // if (resp == resp_finish)
+    //     return FALSE;
+
+    // return TRUE;
+    
+    resp = MENU_Main (&configurations);
+
+    //wraper to clean sw
+    g_mutex_lock (&mutex);
+
+    if (switch_actions != selection_none)
+        switch_actions = selection_none;
+    
+    g_mutex_unlock (&mutex);
+
     
     return TRUE;
+
+    // Lcd_TransmitStr("Hola!!!");
+    // Lcd_Command(4);
+    // Lcd_Command(6);
+    // Lcd_SetDDRAM(0x01);
+
+    // return FALSE;
+    
 }
 
 
@@ -540,157 +541,277 @@ void set_button_function (void)
 
 
 
-// Functions for test definition -----------------------------------------------
-#define LINE_LENGTH_16
-
-//for show select in ms
-#define TT_SHOW_SELECT_IN_ON    1000
-#define TT_SHOW_SELECT_IN_OFF   500
-
-
-//estados de la funcion SHOW SELECT
-#define SHOW_SELECT_INIT				0
-#define SHOW_SELECT_1					1
-#define SHOW_SELECT_2					2
-#define SHOW_SELECT_3					3
-#define SHOW_SELECT_SELECTED			4
-#define SHOW_SELECT_SELECTED_1			5
-#define SHOW_SELECT_CHANGE				6
-#define SHOW_SELECT_CHANGE_1			7
-
-#define LCD_1ER_RENGLON    Lcd_SetDDRAM(0x00)
-#define LCD_2DO_RENGLON    Lcd_SetDDRAM(0x40)
-
-char s_blank [] = {"                "};
-
-void LCD_ShowSelectv2Reset (void)
+// LCD low level Functions, reimplemeted for hardware abstraction --------------
+// Nedded by lcd_utils module provided by lcd module
+void LCD_Init_Setup (void)
 {
-    show_select_state = SHOW_SELECT_INIT;
 }
 
 
-sw_actions_t show_select_change_sw_action = 0;
-resp_t LCD_ShowSelectv2 (const char * p_text, sw_actions_t sw_action)
+int lcd_line = 0;
+int lcd_cursor = 0;
+void Lcd_TransmitStr (char * line)
 {
-    resp_t resp = resp_continue;
-
-    switch (show_select_state)
+    while (*line != '\0')
     {
-    case SHOW_SELECT_INIT:
-        LCD_2DO_RENGLON;
-#ifdef LINE_LENGTH_8
-        Lcd_TransmitStr((const char *) "Cnt Slct");
-#endif
-#ifdef LINE_LENGTH_16        
-        // Lcd_TransmitStr((const char *) "Cont.     Select");
-        // Lcd_TransmitStr((const char *) "SET    or    < >");
-        Lcd_TransmitStr((const char *) "<-> o Set Acepta");                
-#endif        
-        show_select_state++;
-        break;
-
-    case SHOW_SELECT_1:
-        g_print("select 1\n");
-        LCD_1ER_RENGLON;
-        Lcd_TransmitStr(p_text);
-        show_select_timer = TT_SHOW_SELECT_IN_ON;
-        show_select_state++;
-        break;
-
-    case SHOW_SELECT_2:
-        if (!show_select_timer)
+        //if we have the char in the list send it
+        if ((*line >= 32) && (*line < (LAST_SYMBOL_IN_CGROM + 32)))
         {
-            g_print("select 2\n");
-            LCD_1ER_RENGLON;
-            Lcd_TransmitStr((const char *) s_blank);
-            show_select_timer = TT_SHOW_SELECT_IN_OFF;
-            show_select_state++;
-        }
-
-        // check switches actions
-        if ((sw_action == selection_up) || (sw_action == selection_dwn))
-        {
-            show_select_state = SHOW_SELECT_CHANGE;
-            show_select_change_sw_action = sw_action;
-        }
-
-        if (sw_action == selection_enter)
-            show_select_state = SHOW_SELECT_SELECTED;
-
-        break;
-
-    case SHOW_SELECT_3:
-        if (!show_select_timer)
-        {
-            show_select_state = SHOW_SELECT_1;
-        }
-
-        // check switches actions
-        if ((sw_action == selection_up) || (sw_action == selection_dwn))
-        {
-            show_select_state = SHOW_SELECT_CHANGE;
-            show_select_change_sw_action = sw_action;
-        }
-
-        if (sw_action == selection_enter)
-            show_select_state = SHOW_SELECT_SELECTED;
-
-        break;
-
-    case SHOW_SELECT_SELECTED:
-        LCD_1ER_RENGLON;
-        Lcd_TransmitStr(p_text);
-        LCD_2DO_RENGLON;
-#ifdef LINE_LENGTH_8
-        Lcd_TransmitStr((const char *) "Selected");
-#endif
-#ifdef LINE_LENGTH_16
-        // Lcd_TransmitStr((const char *) "Selected...     ");
-        Lcd_TransmitStr((const char *) "Seleccionado... ");
-#endif        
-        show_select_state++;
-        break;
-
-    case SHOW_SELECT_SELECTED_1:
-        if (sw_action == selection_none)
-        {
-            resp = resp_selected;
-            show_select_state = SHOW_SELECT_INIT;
-        }
-        break;
-
-    case SHOW_SELECT_CHANGE:
-        LCD_1ER_RENGLON;
-        Lcd_TransmitStr(p_text);
-        LCD_2DO_RENGLON;
-#ifdef LINE_LENGTH_8
-        Lcd_TransmitStr((const char *) "Changing");
-#endif
-#ifdef LINE_LENGTH_16
-        //TODO: si es encoder no hace falta
-        // Lcd_TransmitStr((const char *) "Changing...     ");
-#endif        
-        show_select_state++;
-        break;
-
-    case SHOW_SELECT_CHANGE_1:
-        if (sw_action == selection_none)
-        {
-            if (show_select_change_sw_action == selection_up)
-                resp = resp_change_all_up;
+            draw_lcd_patch_from_cgrom (pix, lcd_line, lcd_cursor, (*line - 32));
+            if (lcd_line == 0)
+                lcd_display.ddram_l1[lcd_cursor] = *line;
             else
-                resp = resp_change;
-
-            show_select_state = SHOW_SELECT_INIT;
+                lcd_display.ddram_l2[lcd_cursor] = *line;
         }
-        break;
 
-    default:
-        show_select_state = SHOW_SELECT_INIT;
-        break;
+        //update the cursor
+        lcd_cursor++;
+        line++;
+    }
+    gtk_image_set_from_pixbuf (GTK_IMAGE(imag1), pix);    
+}
+
+
+void Lcd_SetDDRAM (uint8_t ddram)
+{
+    if (ddram < 16)
+    {
+        lcd_line = 0;
+        lcd_cursor = ddram;
     }
 
-    return resp;
+    if ((ddram < (0x40 + 16)) && (ddram >= 0x40))
+    {
+        lcd_line = 1;
+        lcd_cursor = ddram - 0x40;
+    }
 }
+
+
+void Lcd_senddata (unsigned char data)
+{
+    if ((data >= 32) && (data < (LAST_SYMBOL_IN_CGROM + 32)))
+    {
+        draw_lcd_patch_from_cgrom (pix, lcd_line, lcd_cursor, (data - 32));
+        if (lcd_line == 0)
+            lcd_display.ddram_l1[lcd_cursor] = data;
+        else
+            lcd_display.ddram_l2[lcd_cursor] = data;
+        
+    }
+
+    //update the cursor
+    lcd_cursor++;
+
+    gtk_image_set_from_pixbuf (GTK_IMAGE(imag1), pix);    
+    
+}
+
+void Lcd_SetCGRAM (unsigned char data)
+{
+}
+
+
+
+gboolean Lcd_Timeout_Callback (gpointer user_data)
+{
+    gint line_pos = lcd_line;
+    gint cursor_pos = lcd_cursor;
+    
+    if ((lcd_display.cursor) && (lcd_display.blink))
+    {
+        if (lcd_display.blink_was_on)
+        {
+            lcd_display.blink_was_on = 0;
+
+            //check for old blinking index
+            if ((lcd_display.blink_last_index_cursor != cursor_pos) ||
+                (lcd_display.blink_last_index_line != line_pos))
+            {
+                int cp = lcd_display.blink_last_index_cursor;
+                if (lcd_display.blink_last_index_line == 0)
+                {
+                    draw_lcd_patch_from_cgrom (pix,
+                                               0,
+                                               cp,
+                                               (lcd_display.ddram_l1[cp] - 32));
+                }
+                else
+                {
+                    draw_lcd_patch_from_cgrom (pix,
+                                               1,
+                                               cp,
+                                               (lcd_display.ddram_l2[cp] - 32));
+                }
+            }
+
+            if ((line_pos <= 1) && (cursor_pos <= 15))
+            {
+                if (line_pos == 0)
+                {
+                    draw_lcd_patch_from_cgrom (pix,
+                                               line_pos,
+                                               cursor_pos,
+                                               (lcd_display.ddram_l1[cursor_pos] - 32));
+                }
+                else
+                {
+                    draw_lcd_patch_from_cgrom (pix,
+                                               line_pos,
+                                               cursor_pos,
+                                               (lcd_display.ddram_l2[cursor_pos] - 32));
+                }
+            }
+        }
+        else
+        {
+            lcd_display.blink_was_on = 1;
+
+            //check for old blinking index
+            if ((lcd_display.blink_last_index_cursor != cursor_pos) ||
+                (lcd_display.blink_last_index_line != line_pos))
+            {
+                int cp = lcd_display.blink_last_index_cursor;
+                if (lcd_display.blink_last_index_line == 0)
+                {
+                    draw_lcd_patch_from_cgrom (pix,
+                                               0,
+                                               cp,
+                                               (lcd_display.ddram_l1[cp] - 32));
+                }
+                else
+                {
+                    draw_lcd_patch_from_cgrom (pix,
+                                               1,
+                                               cp,
+                                               (lcd_display.ddram_l2[cp] - 32));
+                }
+            }
+            
+            if ((line_pos <= 1) && (cursor_pos <= 15))
+            {
+                rgb_st rgb_fill;
+                rgb_fill.R = 10;
+                rgb_fill.G = 10;
+                rgb_fill.B = 10;
+                
+                int x = 0;
+                int y = 0;
+                get_lcd_patch_position (line_pos, cursor_pos, &x, &y);
+                draw_lcd_patch (pix, x, y, &rgb_fill);
+
+                lcd_display.blink_last_index_cursor = cursor_pos;
+                lcd_display.blink_last_index_line = line_pos;
+            }
+        }
+        
+        gtk_image_set_from_pixbuf (GTK_IMAGE(imag1), pix);
+    }
+
+    return TRUE;
+}
+
+
+#define CLEAR         0
+#define RET_HOME      1
+#define DISPLAY_ON    2
+#define DISPLAY_OFF   3
+#define CURSOR_ON     4
+#define CURSOR_OFF    5
+#define BLINK_ON      6
+#define BLINK_OFF     7
+void Lcd_Command (unsigned char data)
+{
+    if ((data == CLEAR) || (data == DISPLAY_OFF))
+    {
+        unfill_surface();
+        fill_with_lcd_patches(pix);
+        gtk_image_set_from_pixbuf (GTK_IMAGE(imag1), pix);        
+        Lcd_SetDDRAM(0x00);
+        for (int i = 0; i < 16; i++)
+        {
+            lcd_display.ddram_l1[i] = 0;
+            lcd_display.ddram_l2[i] = 0;
+        }
+    }
+
+    if (data == RET_HOME)
+        Lcd_SetDDRAM(0x00);
+
+    if (data == DISPLAY_OFF)
+    {
+        //TODO: poner traba para no mostrar nada hasta DISPLAY_ON
+        unfill_surface();
+        fill_with_lcd_patches(pix);
+        gtk_image_set_from_pixbuf (GTK_IMAGE(imag1), pix);        
+        lcd_display.cursor = 0;
+        lcd_display.blink = 0;
+    }
+    
+    if (data == CURSOR_ON)
+        lcd_display.cursor = 1;
+
+    if (data == CURSOR_OFF)
+        lcd_display.cursor = 0;
+
+    if (data == BLINK_ON)
+        lcd_display.blink = 1;
+
+    if (data == BLINK_OFF)
+        lcd_display.blink = 0;
+    
+}
+// End of LCD low level Functions ----------------------------------------------
+
+
+
+// Nedded by menues module provided by hard module
+void UpdateEncoder (void)
+{
+}
+
+resp_sw_t CheckSET (void)
+{
+    resp_sw_t sw = SW_NO;
+    
+    g_mutex_lock (&mutex);
+
+    if (switch_actions == selection_enter)
+        sw = SW_MIN;
+    
+    g_mutex_unlock (&mutex);
+    
+    return sw;    
+}
+
+unsigned char CheckCCW (void)
+{
+    unsigned char a = 0;
+    
+    g_mutex_lock (&mutex);
+
+    if (switch_actions == selection_dwn)
+        a = 1;
+    
+    g_mutex_unlock (&mutex);
+    
+    return a;
+}
+
+
+unsigned char CheckCW (void)
+{
+    unsigned char a = 0;
+    
+    g_mutex_lock (&mutex);
+
+    if (switch_actions == selection_up)
+        a = 1;
+    
+    g_mutex_unlock (&mutex);
+    
+    return a;
+}
+
 
 //--- end of file ---//
