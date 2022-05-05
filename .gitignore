@@ -6,3 +6,5 @@ GPATH
 libcsv
 *.o
 *.out
+*.pdf
+*.*~

@@ -4,7 +4,7 @@
 
 #---------------------------------------
 # Set the project name (executable file name)
-TARGET = ncur
+TARGET = sock_serv
 
 #---------------------------------------
 # Set the compiler
@@ -24,7 +24,7 @@ CC = gcc    #for use of the GNU C compiler
 #---------------------------------------
 # Set the libraries used
 # LIBS = -lm    #the math lib (libm.a) in /usr/lib or /usr/lib64
-LIBS = -lncurses    #the curses lib
+# LIBS = -lncurses    #the curses lib
 
 #---------------------------------------
 # List here the sources files
@@ -38,15 +38,20 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CC) $(OBJS) $(LDFLAGS) $(LIBS) -o $@
+	gtags -q
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) $^ -o $@
 
-test_ncurses:
-	$(CC) test_ncurses.c $(LIBS)
+# test_ncurses:
+# 	$(CC) test_ncurses.c $(LIBS)
 
 clean:
 	rm -f *.o
+	rm -f *.out
 	rm -f $(TARGET)
+	rm -f *.gcda
+	rm -f *.gcno
+	rm -f *.gcov
 
 # *** EOF ***

@@ -29,6 +29,10 @@
   https://codepr.github.io/posts/sol-mqtt-broker
 
 
+* Bithacks!
+** Acelerar código por manejo de bits
+   https://graphics.stanford.edu/~seander/bithacks.html
+
 * Algunas cosas adicionales del lenguaje y sus librerias
 ** nm (busca funciones y variables en archivos objeto y ejecutables)
    Do nm on the final executable or on the object files. All symbols labelled B, C, or D 
@@ -261,6 +265,11 @@ int main(void)
    unsigned int vector [] = {[0 ... 3] = 5};    //esto funciona??
 
    unsigned short input [TEST_LENGTH] = {[0 ... (TEST_LENGTH - 1)] =  900 };
+** String Array initialization
+   char str [] = { "Hello" };    //sigle init
+
+   char str_list [2] [10] = {{"Hello"} , {"Good bye"}};    //double bracket init
+   // tengo que darle los tamanios
 
 * Compiler and Linker Options & Code Analisys
   https://interrupt.memfault.com/blog/best-and-worst-gcc-clang-compiler-flags
@@ -344,14 +353,63 @@ int main(void)
 
 *** Lizard
     Script python que revisa el codigo
+    You can set limitation for CCN (-C), the number of parameters (-a).
     https://pypi.org/project/lizard/
 
     - pip3 install lizard
     - lizard src    #busca en todos los archivos de codigo y hace el diagnostico
+    - lizard -a 3 src    #con mas de 3 parametros hace un warning
+    - lizard -a 3 src -x"src/tests*"    #excluye todos los modulos de tests del resultado
+    - lizard -a 3 -w src -x"src/tests*"    #solo muestra los warnings
+
+    the nloc (lines of code without comments),
+    CCN (cyclomatic complexity number),
+    token count of functions.
+    parameter count of functions.
 
 *** OCLint
     programa que revisa el codigo mas complejo que lizard
 
+** Code coverage - gcov -
+*** gcc gcov
+    - lo uso generalmente en los tests a los modulos del programa
+    - En el Makefile, para probar src/comm.c
+    tests_comm_coverage:
+	# first module objects to test and coverage
+	gcc -c --coverage src/comm.c -I. $(INCDIR)
+	# second auxiliary helper modules
+	gcc -c src/tests_ok.c -I $(INCDIR)
+	# compile the test and link with modules
+	gcc --coverage src/tests_comm.c comm.o tests_ok.o
+	# test execution
+	./a.out
+	# process coverage
+	gcov comm.c -m
+
+    - para ver cuantas veces paso por cada linea
+      less comm.c.gcov
+
+    - la primera columna me muestra las veces que se ejecuto esa linea (columna 2)
+      o si no se ejecuto nunca ####
+
+** Code profiling - gprof -
+*** gcc gprof
+    - gprof me dice el tiempo que toma ejecutar cada funcion
+    - el problema es que la ejecucion es rapida y tengo que poner algun
+      loop de 500000 llamadas para tener algun tiempo significativo, lo que
+      hace que tenga que cambiar el codigo de tests
+    
+tests_comm_profiling:
+	# first module objects to test and profiling
+	gcc -c -pg src/comm.c -I. $(INCDIR)
+	# second auxiliary helper modules
+	gcc -c -pg src/tests_ok.c -I $(INCDIR)
+	# compile the test and link with modules
+	gcc -pg src/tests_comm.c comm.o tests_ok.o
+	# test execution
+	./a.out
+	# process profiling
+	gprof a.out gmon.out > gprof.txt
 
 ** Mapa de funciones llamadas gnu cflow
    GNU cflow analyzes a collection of C source files and prints a graph 
@@ -413,13 +471,6 @@ int main()
     return 0;
 }
 
-
-
-
-
-
-
-
 * file descriptor leak
 ** fd for processes
    /proc/<pid>/fd
@@ -468,13 +519,105 @@ int main()
     - [0;32m	Green
     - [1;32m	Bold Green
     - [0;33m	Yellow
-    - [01;33m	Bold Yellow
+    - [1;33m	Bold Yellow
     - [0;34m	Blue
     - [1;34m	Bold Blue
     - [0;35m	Magenta
     - [1;35m	Bold Magenta
     - [0;36m	Cyan
     - [1;36m	Bold Cyan
+
+** More on ANSI Colors
+*** Select Graphic Rendition
+   The ANSI escape sequences you're looking for are the Select Graphic Rendition subset.
+   All of these have the form
+
+   \033[XXXm
+   where XXX is a series of semicolon-separated parameters.
+
+   To say, make text red, bold, and underlined (we'll discuss many other options below) in C you might write:
+   printf("\033[31;1;4mHello\033[0m");    //setea color imprime Hello y resetea color
+
+
+*** Font Effects
+Code	Effect	Note
+0	Reset / Normal	all attributes off
+1	Bold or increased intensity	
+2	Faint (decreased intensity)	Not widely supported.
+3	Italic	Not widely supported. Sometimes treated as inverse.
+4	Underline	
+5	Slow Blink	less than 150 per minute
+6	Rapid Blink	MS-DOS ANSI.SYS; 150+ per minute; not widely supported
+7	[[reverse video]]	swap foreground and background colors
+8	Conceal	Not widely supported.
+9	Crossed-out	Characters legible, but marked for deletion. Not widely supported.
+10	Primary(default) font	
+11–19	Alternate font	Select alternate font n-10
+20	Fraktur	hardly ever supported
+21	Bold off or Double Underline	Bold off not widely supported; double underline hardly ever supported.
+22	Normal color or intensity	Neither bold nor faint
+23	Not italic, not Fraktur	
+24	Underline off	Not singly or doubly underlined
+25	Blink off	
+27	Inverse off	
+28	Reveal	conceal off
+29	Not crossed out	
+30–37	Set foreground color	See color table below
+38	Set foreground color	Next arguments are 5;<n> or 2;<r>;<g>;<b>, see below
+39	Default foreground color	implementation defined (according to standard)
+40–47	Set background color	See color table below
+48	Set background color	Next arguments are 5;<n> or 2;<r>;<g>;<b>, see below
+49	Default background color	implementation defined (according to standard)
+51	Framed	
+52	Encircled	
+53	Overlined	
+54	Not framed or encircled	
+55	Not overlined	
+60	ideogram underline	hardly ever supported
+61	ideogram double underline	hardly ever supported
+62	ideogram overline	hardly ever supported
+63	ideogram double overline	hardly ever supported
+64	ideogram stress marking	hardly ever supported
+65	ideogram attributes off	reset the effects of all of 60-64
+90–97	Set bright foreground color	aixterm (not in standard)
+100–107	Set bright background color	aixterm (not in standard)
+
+*** 4-bit Colours
+    The standards implementing terminal colours began with limited (4-bit) options.
+    The table below lists the RGB values of the background and foreground colours 
+    used for these by a variety of terminal emulators:
+
+    Using the above, you can make red text on a green background (but why?) using:
+    \033[31;42m
+
+| Color          | FG Color | BG Color |
+|----------------+----------+----------|
+| Black          |       30 |       40 |
+| Red            |       31 |       41 |
+| Green          |       32 |       42 |
+| Yellow         |       33 |       43 |
+| Blue           |       34 |       44 |
+| Magenta        |       35 |       45 |
+| Cyan           |       36 |       46 |
+| White          |       37 |       47 |
+| Bright Black   |       90 |      100 |
+| Bright Red     |       91 |      101 |
+| Bright Green   |       92 |      102 |
+| Bright Yellow  |       93 |      103 |
+| Bright Blue    |       94 |      104 |
+| Bright Magenta |       95 |      105 |
+| Bright Cyan    |       96 |      106 |
+| Bright White   |       97 |      107 |
+|                |          |          |
+
+
+
+
+
+
+
+
+
 
 * GTK GUI Development
 ** Para levantar archivos XML? desde glade
@@ -485,4 +628,226 @@ int main()
 ** Para dibujar se utiliza cairo
    - https://www.cairographics.org/tutorial/
 
+** En test_gtk logre dibujar directamente con PixBuff
+
+
+* Testing tipo TDD - Embedded
+** Lo dificil es desacoplar los modulos del hardware
+   - desacoplando los modulos se los puede probar o simular directamente
+     individualmente
+
+** Stubs a nivel Linker
+*** Link-level Stubbing
+    Among the techniques available for faking functions in C, link-level stubs 
+    are a great place to begin because they require *no changes to production code!* 
+    One of the first functions you may want to replace is main() so that the test
+    runner is the new entry point for the resulting binary.
+
+runner: runner.o sut.o
+        strip -N main sut.o _sut.o
+        ${CC} -o $@ runner.o _sut.o ${LDFLAGS}
+
+    Here we create a stripped version of the object code utility.o which allows 
+    the linker to connect the new main from runner.o. Of course the test runner 
+    should always be executed as part of the build.
+
+all: utility runner test
+
+test:
+        ./runner   
+
+*** Beneficios y problemas
+    - De esta manera puedo crear un nuevo modulo main o reemplazar la funcion
+      main en el codigo real.
+    - Esta nueva main puede ir llamando a las otras funciones para testearlas.
+    - En el caso de que algun modulo tenga funciones static, se puede agregar
+      codigo en el modulo para hacer un wrapper de esas funciones y testearlas
+      dentro del propio modulo, pero ahora llamando al wrapper con scope global.
+    - Este scope global lo activo a la hora de compilar con la opcion -D, ver proximo punto.
+    - Un problema son las funciones static, el otro y mas importante son las
+      funciones que acceden al hardware, de ahi la necesidad de desacoplar el
+      codigo de los modulos.
+
+** Cambiar interfaces con el Preprocesador
+*** Faking Interfaces with the C Preprocessor
+    Linking a test runner only works if functions have a global scope (e.g., don't
+    use the static storage class). It may be sensible to inject the test code into 
+    each module using the C preprocessor. This is a very powerful technique, but it 
+    means maintaining separate build configurations, which has several implications.
+
+    Everything needs to be built twice, so it really helps to use a fast compiler. 
+    Build scripts and makefiles are making very strategic substitutions here, so I 
+    would strongly recommend staying clear of auto-tools. Instead factor out common 
+    elements and include them in platform-specific build configurations.
+
+# config.mk
+CC = pcc
+INCS =
+LIBS =
+CFLAGS = -O -g -std=c99 -pedantic -Wall ${INCS}
+LDFLAGS = -static ${LIBS}
+Compile each source file with the -D flag to set macros that the preprocessor can use
+
+include config.mk
+
+sut.o:
+        @echo CC $<
+        @${CC} -c -DTEST ${CFLAGS} $<
+        Preprocessor instructions can be placed anywhere, but one way of organizing code
+        is to break it into two distinct segments. The first is the system under test, 
+        and should contain all of the core functionality of the module, the second will
+        include main() and other definitions that may be replaced by fake functions in
+        the specification header.
+
+/* sut.c */
+
+/* functions to be tested */
+
+#ifdef TEST
+#include "sut_spec.h"
+#else
+
+/* functions to be faked */
+
+#endif
+
+*** Beneficios y problemas
+    - Con este metodo puedo acceder a testear funciones static.
+    - Tambien puedo conseguir desacople del hardware, definiendo dos tipos de accesos
+      por medio del preprocesador, el acceso al hardware en el codigo de produccion y
+      el acceso a printf (por ejemplo) para el codigo de testeo.
+    - El mayor problema es que estoy modificando el codigo original de la aplicacion
+      con unos cuantos #define & #ifdef adicionales.
+
+** Cambio en funciones dinamicas con punteros a funcion
+*** Dynamic Mocks Using Global Function Pointers
+    If you don't mind one step of indirection, functions can be aliased with a 
+    function pointer which the test runner can then redefine at runtime.
+
+/* sut.c */
+
+int (*myfunc)(int);
+
+int myfunc_IO(int x) {
+    /* ... */
+}
+int (*myfunc)(int) = myfunc_IO;
+/* runner.c */
+
+int myfunc_fake(int x) {
+    /* ... */
+}
+
+void redefine_func_pointers() {
+    myfunc = myfunc_fake;
+}
+Since globals in C are initialized to 0, an if statement can be used in corner 
+cases where you might want to determine if function pointer has been defined but 
+not initialized. Replacing main() is an example of when you might need to do this.
+
+/* sut.c */
+
+int (*test_runner_main)(int, char **);
+
+int main(int argc, char **argv) {
+    if((*test_runner_main))
+        return(test_runner_main(argc, argv));
+    /* ... */
+}
+/* runner.c */
+
+#include "sut.c"
+
+int test_main(int argc, char **argv) {
+    /* run tests */
+}
+int (*test_runner_main)(int argc, char **argv) = test_main;
+
+*** Beneficios y problemas
+    - Esto no lo uso nunca, me fuerza a cambiar la dinamica del programa solo
+      por el sistema de testeo.
+
+* Que uso generalmente para testeo Embedded
+** Mi interes general ~que busco~
+*** Desarrollar el firmware sin tener el prototipo -previo al prototipo-
+    - Quiero desarrollar todo el soft antes de que llegue y se ensamble el prototipo.
+    - Para esto necesito un buen desacople de modulos, algunos testeos en funciones
+      especiales y alguna simulacion.
+    - Tambien armo con el mismo nombre de las funciones unos tests en hard ya preparados.
+      Cuando llega el prototipo, tengo toda la logica del programa testeada y simulada,
+      ademas con los mismos nombres de funciones tengo tests de hard preparados.
+    - Con el prototipo, lo primero que hago es testear con las funciones test_hard, 
+      si estas dan buen resultado, ya se que todo el soft va a funcionar.
+
+*** Desarrollar con el prototipo -mucho mas rapido-
+    - Con el prototipo probado y el soft funcionando, muchas veces aparecen modificaciones
+      pedidas por el cliente.
+    - El sistema de simulaciones ya armado me permite ensayar estos cambios sin tener
+      que estar regrabando la placa prototipo, lo que me da mucha velocidad en los 
+      cambios que hago.
+    - Finalmente implemento cambios (testeados y simulados) al prototipo.
+
+*** Cambios con el producto en el cliente
+    - El sistema de testeo y simulacion me permite, *con algo de seguridad*, 
+      poder realizar cambios y mandar el codigo nuevo al cliente sin ensayarlo en el hard.
+
+** Como lo hago o implemento
+*** Solo ver como resuelve una funcion
+   - si solo quiero ver que hace una funcion, la copio directamente a un test_main
+     que compilo con gcc, si la funcion tiene acople de hard lo cambio a printf.
+     Ejemplo, filtro digital, juegos luces LEDs, etc.
+
+*** Testeo la interface de un modulo completo
+   - Uso un test_main para ir llamando funcion a funcion a la interface del modulo
+     a testear, lo compilo a gcc, necesito que este modulo este desacoplado del hard.
+   - Puedo agregar un tercer modulo fake que implementa los accesos al hard.
+     test_main -> modulo.o:funcion1() -> fake_hard.o -> console output
+
+   - Si quisiera controlar maximos y minimos de la funcion1 (cosa que no hago mucho)
+     la puedo llamar con extremos desde test_main y revisar los resultados.
+     Aca ademas tengo unas salidas por consola que me dicen si pasa el test o falla
+     con colores.
+   
+
+
+      
+
+* Threads C
+** uso lib pthread
+   - #include <pthread.h>
+   - compilar con -lpthread para incluir la lib
+
+** Creating Thread
+   int pthread_create (pthread_t * thread, 
+                       const pthread_attr_t * attr, 
+                       void * (*start_routine) (void *),
+                       void * arg);
+
+   ~pasando file desc como argumento~
+   pthread_t p1;
+   int rc;
+   rc = pthread_create(&p1, NULL, SerialInput, (void *)&fd);
+   if (rc){
+       printf("ERROR; return code from pthread_create() is %d\n", rc);
+       _exit(-1);
+   }
+
+   ~llamando sin argumento~
+   pthread_t p2;
+   int rc2;
+   rc2 = pthread_create(&p2, NULL, KeyboardInput, (void *)&rc2);
+   if (rc2){
+       printf("ERROR; return code from pthread_create() is %d\n", rc2);
+       _exit(-1);
+   }
+
+** Join - espero que termine el thread -
+   - desde el hilo principal, main generalmente
+     pthread_join(p1, NULL);
+
+** Exit - termino el thread
+   - desde el hilo del propio thread
+     pthread_exit(NULL);    //lo que va a contestar al join del main
+
+   
 

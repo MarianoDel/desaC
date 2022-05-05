@@ -1,0 +1,46 @@
+* Cosas especiales del Makefile
+** link manual online
+   - https://www.gnu.org/software/make/manual/html_node/Conditional-Syntax.html#Conditional-Syntax
+
+** Ejecucion condicional
+   ifeq ($(DDEFS), -DSTM32G030xx)
+   $(info ************ STM32G070 VERSION ************)
+   else
+   $(info ************ STM32G030 VERSION ************)
+   endif
+
+*** Condicional simple
+    conditional-directive
+    text-if-true    # pueden ser multiples lineas
+    endif
+
+*** Condicional complejo
+    conditional-directive
+    text-if-true
+    else
+    text-if-false
+    endif
+
+    conditional-directive-one
+    text-if-one-is-true
+    else conditional-directive-two
+    text-if-two-is-true
+    else
+    text-if-one-and-two-are-false
+    endif
+
+*** Formatos validos
+    ifeq (arg1, arg2)
+    ifeq 'arg1' 'arg2'
+    ifeq "arg1" "arg2"
+    ifeq "arg1" 'arg2'
+    ifeq 'arg1' "arg2"
+
+** Messages
+   $(info your_text) : Information. This doesn't stop the execution.
+
+   $(warning your_text) : Warning. This shows the text as a warning.
+
+   $(error your_text) : Fatal Error. This will stop the execution.
+
+

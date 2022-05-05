@@ -78,3 +78,6 @@ unsigned short MA8Circular (ma8_data_obj_t *p_data, unsigned short new_sample)
 
     return (unsigned short) (p_data->total_ma8 >> 3);    
 }
+
+
+//--- end of file ---//
