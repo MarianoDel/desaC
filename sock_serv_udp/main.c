@@ -1,8 +1,9 @@
 //------------------------------------------------------------
-// Server TCP for testing pourpose
+// Server UDP for testing pourpose
 // OS: linux
 // Compiler: gcc
 // tags: Global
+// https://docs.oracle.com/cd/E23824_01/html/821-1602/sockets-14.html
 // http://www.cs.rpi.edu/~moorthy/Courses/os98/Pgms/server.c
 //------------------------------------------------------------
 
@@ -41,7 +42,7 @@ int main (int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) 
         error("ERROR opening socket");
 
@@ -55,47 +56,23 @@ int main (int argc, char *argv[])
              sizeof(serv_addr)) < 0) 
         error("ERROR on binding");
 
-    listen(sockfd,5);
-    clilen = sizeof(cli_addr);
+    printf("Socket port #%d\n", ntohs(serv_addr.sin_port));
 
-    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-    if (newsockfd < 0) 
-        error("ERROR on accept");
-
-    printf("New connection\n");
-    int i = 0;
-
+    int i = 0;    
     while (1)
     {
-        if (newsockfd < 0) 
-            error("ERROR on accept");
+        // Read a packet from the socket.
+        bzero(buffer, sizeof(buffer));
+        
+        if (read(sockfd, buffer, sizeof(buffer) - 1) == -1 )
+            error("ERROR receiving datagram packet");
 
-        bzero(buffer,256);
-
-        n = read(newsockfd,buffer,255);
         i++;
-
-        if (n < 0)
-            error("ERROR reading from socket");
-	else if (n == 0)
-	{
-	    printf("connection close by foreign\n");
-            close(newsockfd);
-	    return 0;
-	}
-	else
-	{
-	    int len = strlen (buffer);
-	    printf("msg_num: %d, len: %d here is the message: %s\n", i, len, buffer);
-	    
-	    // answer to client
-	    char answer_str[200];
-	    sprintf(answer_str,"I got your message with len: %d\r\n", len);
-	    n = write(newsockfd, answer_str, strlen(answer_str));
-
-	    if (n < 0)
-	        error("ERROR writing to socket");
-	}
+        int len = strlen (buffer);
+        printf("msg_num: %d, len: %d here is the message: %s\n",
+               i,
+               len,
+               buffer);
     }
 
     return 0;
