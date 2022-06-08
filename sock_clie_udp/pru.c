@@ -13,11 +13,8 @@
 #include <sys/time.h> /* select() */
 #include <stdlib.h>
 
-#define REMOTE_SERVER_PORT 1500
-#define MAX_MSG 100
 
-
-int main(int argc, char *argv[])
+int main (int argc, char *argv[])
 {
     int sd, rc, i;
     struct sockaddr_in cliAddr, remoteServAddr;
@@ -30,7 +27,9 @@ int main(int argc, char *argv[])
     if(argc < 4)
     {
         printf("for send ascii use: %s <server> <port> <data1> ... <dataN>\n", argv[0]);
-        printf("for send binary use: %s <server> <port> <data> ;; only numbers or A to F\n", argv[0]);
+        printf("for send binary use: %s <server> <port> <data> <wait in s>\n", argv[0]);
+        printf("  <data> only numbers or A to F\n");
+        printf("  <wait in s> seconds from 0 to 99\n");        
         _exit(1);
     }
 
@@ -74,9 +73,8 @@ int main(int argc, char *argv[])
         _exit(1);
     }
 
-
     // send data ASCII or BINARY?
-    if ((argc == 4) &&
+    if ((argc == 5) &&
         ((*argv[3] >= '0') && (*argv[3] <= '9')) ||
         ((*argv[3] >= 'A') && (*argv[3] <= 'F')) ||
         ((*argv[3] >= 'a') && (*argv[3] <= 'f')))
@@ -109,11 +107,38 @@ int main(int argc, char *argv[])
         rc = sendto(sd, buff_to_send, buff_len, 0,
                     (struct sockaddr *) &remoteServAddr,
                     sizeof(remoteServAddr));
+        
         if(rc < 0)
         {
             printf("%s: cannot send data %d \n",argv[0],i-1);
             close(sd);
             _exit(1);
+        }
+
+        // wait for server answer
+        int seconds = atoi(argv[4]);
+        if ((seconds > 0) && (seconds < 100))
+        {
+            bzero(buff_to_send, sizeof(buff_to_send));
+            printf("wait for seconds %d", seconds);
+            fflush(stdout);
+            while (seconds)
+            {
+                rc = recv(sd, buff_to_send, sizeof(buff_to_send), MSG_DONTWAIT);
+                if (rc > 0)
+                {
+                    printf("\nasnwer getted!!! message: %s\n", buff_to_send);
+                    seconds = 0;
+                }
+                else
+                {
+                    sleep(1);
+                    seconds--;
+                    printf(" %d", seconds);
+                    fflush(stdout);
+                }
+            }
+            printf("\n");
         }
     }
     else

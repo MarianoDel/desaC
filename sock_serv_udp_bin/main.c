@@ -38,10 +38,17 @@ int main (int argc, char *argv[])
     unsigned char buffer[2048];
     struct sockaddr_in serv_addr, cli_addr;
     int n;
+    int use_answer = 0;
+    
     if (argc < 2) {
         fprintf(stderr,"ERROR, no port provided\n");
+        printf("for server without answer %s <port>\n", argv[0]);
+        printf("for server with answer %s <port> <1>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
+
+    if ((argc == 3) && (*argv[2] == '1'))
+        use_answer = 1;
     
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) 
@@ -57,7 +64,10 @@ int main (int argc, char *argv[])
              sizeof(serv_addr)) < 0) 
         error("ERROR on binding");
 
-    printf("Socket port #%d\n", ntohs(serv_addr.sin_port));
+    if (use_answer)
+        printf("Socket port #%d with answer on binary pckts\n", ntohs(serv_addr.sin_port));
+    else
+        printf("Socket port #%d\n", ntohs(serv_addr.sin_port));
 
     int i = 0;    
     while (1)
@@ -85,6 +95,20 @@ int main (int argc, char *argv[])
                    cli_addr_str,
                    htons(cli_addr.sin_port));
             printf("message: %s\n", buffer);
+
+            // no answer on ascii mode!
+            // if (use_answer)
+            // {
+            //     char buff_to_send [30];
+            //     strcpy(buff_to_send, "OK");
+            //     int rc = sendto(sockfd, buff_to_send, 3, 0,
+            //                     (struct sockaddr *) &cli_addr,
+            //                     sizeof(cli_addr));
+
+            //     if (rc < 0)
+            //         printf("error in answer\n");
+                
+            // }            
         }
         else
         {
@@ -99,6 +123,20 @@ int main (int argc, char *argv[])
                 printf("%x", buffer[j]);
 
             printf("\n");
+            
+            // check if answer is needed
+            if (use_answer)
+            {
+                char buff_to_send [30];
+                strcpy(buff_to_send, "OK");
+                int rc = sendto(sockfd, buff_to_send, 3, 0,
+                                (struct sockaddr *) &cli_addr,
+                                sizeof(cli_addr));
+
+                if (rc < 0)
+                    printf("error in answer\n");
+                
+            }
         }
     }
 
