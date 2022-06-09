@@ -158,8 +158,20 @@ int main (int argc, char *argv[])
         
     }
     else if (ascii_or_binary == USE_ASCII)
-    {                
-        for(i = ASCII_DATA_POS; i < argc; i++)
+    {
+        // wait for server answer?
+        int seconds = 0;
+        unsigned char buff_to_send [30] = { 0 };
+        int max_argc_index = argc;
+
+        if ((strlen(argv[argc - 1]) <= 3))    //no more than three digits
+        {
+            seconds = atoi(argv[argc - 1]);    
+            if ((seconds > 0) && (seconds < 100))    //if seconds != 0 wait for server
+                max_argc_index--;
+        }
+
+        for(i = ASCII_DATA_POS; i < max_argc_index; i++)
         {
             rc = sendto(sd, argv[i], strlen(argv[i])+1, 0,
                         (struct sockaddr *) &remoteServAddr,
@@ -172,14 +184,10 @@ int main (int argc, char *argv[])
             }
         }
 
-        // wait for server?
-        if ((strlen(argv[argc - 1]) <= 3))    //no more than three digits
-        {
-            unsigned char buff_to_send [30] = { 0 };
-            int seconds = atoi(argv[argc - 1]);
-            if ((seconds > 0) && (seconds < 100))
-                get_answer(sd, seconds, buff_to_send, sizeof(buff_to_send));
-        }
+        // wait for server
+        if ((seconds > 0) && (seconds < 100))
+            get_answer(sd, seconds, buff_to_send, sizeof(buff_to_send));
+
     }
     else
         printf("some command line error\n");
