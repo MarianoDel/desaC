@@ -65,7 +65,7 @@ int main (int argc, char *argv[])
         error("ERROR on binding");
 
     if (use_answer)
-        printf("Socket port #%d with answer on binary pckts\n", ntohs(serv_addr.sin_port));
+        printf("Socket port #%d with answer pckts\n", ntohs(serv_addr.sin_port));
     else
         printf("Socket port #%d\n", ntohs(serv_addr.sin_port));
 
@@ -96,19 +96,19 @@ int main (int argc, char *argv[])
                    htons(cli_addr.sin_port));
             printf("message: %s\n", buffer);
 
-            // no answer on ascii mode!
-            // if (use_answer)
-            // {
-            //     char buff_to_send [30];
-            //     strcpy(buff_to_send, "OK");
-            //     int rc = sendto(sockfd, buff_to_send, 3, 0,
-            //                     (struct sockaddr *) &cli_addr,
-            //                     sizeof(cli_addr));
+            // check if answer is needed
+            if (use_answer)
+            {
+                char buff_to_send [30];
+                strcpy(buff_to_send, "OK");
+                int rc = sendto(sockfd, buff_to_send, 3, 0,
+                                (struct sockaddr *) &cli_addr,
+                                sizeof(cli_addr));
 
-            //     if (rc < 0)
-            //         printf("error in answer\n");
+                if (rc < 0)
+                    printf("error in answer\n");
                 
-            // }            
+            }            
         }
         else
         {
