@@ -18,8 +18,11 @@
 #include <strings.h>
 #include <string.h>
 
-// Private Types Constants and Macros ------------------------------------------
 
+// Private Types Constants and Macros ------------------------------------------
+#define SERVER_NO_ANSWER    0
+#define SERVER_ANSWER_OK    1
+#define SERVER_ANSWER_LOOPBACK    2
 
 // Externals -------------------------------------------------------------------
 
@@ -38,17 +41,20 @@ int main (int argc, char *argv[])
     unsigned char buffer[2048];
     struct sockaddr_in serv_addr, cli_addr;
     int n;
-    int use_answer = 0;
+    int use_answer = SERVER_NO_ANSWER;
     
     if (argc < 2) {
         fprintf(stderr,"ERROR, no port provided\n");
         printf("for server without answer %s <port>\n", argv[0]);
-        printf("for server with answer %s <port> <1>\n", argv[0]);
+        printf("for server with answer OK %s <port> <1>\n", argv[0]);
+        printf("for server with answer loopback %s <port> <2>\n", argv[0]);        
         exit(EXIT_FAILURE);
     }
 
     if ((argc == 3) && (*argv[2] == '1'))
-        use_answer = 1;
+        use_answer = SERVER_ANSWER_OK;
+    else if ((argc == 3) && (*argv[2] == '2'))
+        use_answer = SERVER_ANSWER_LOOPBACK;
     
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) 
@@ -64,8 +70,10 @@ int main (int argc, char *argv[])
              sizeof(serv_addr)) < 0) 
         error("ERROR on binding");
 
-    if (use_answer)
-        printf("Socket port #%d with answer pckts\n", ntohs(serv_addr.sin_port));
+    if (use_answer == SERVER_ANSWER_OK)
+        printf("Socket port #%d with answer OK on pckts\n", ntohs(serv_addr.sin_port));
+    else if (use_answer == SERVER_ANSWER_LOOPBACK)
+        printf("Socket port #%d with answer LOOPBACK on pckts\n", ntohs(serv_addr.sin_port));
     else
         printf("Socket port #%d\n", ntohs(serv_addr.sin_port));
 
@@ -80,63 +88,45 @@ int main (int argc, char *argv[])
                                 (struct sockaddr *) &cli_addr, &clilen);
         
         if (sock_len == -1)
+        {
             error("ERROR receiving datagram packet");
+            continue;
+        }
 
         i++;
         int ascii_len = strlen (buffer);
         char cli_addr_str [30] = { 0 };
         strcpy(cli_addr_str, (char *) inet_ntoa(cli_addr.sin_addr));
 
-        if (ascii_len == (sock_len - 1))
+        printf("ascii_msg: %d, ascii_len: %d cli_addr: %s cli_port: %d\n",
+               i,
+               ascii_len,
+               cli_addr_str,
+               htons(cli_addr.sin_port));
+        printf("message: %s\n", buffer);
+
+        // check if answer is needed
+        if (use_answer == SERVER_ANSWER_OK)
         {
-            printf("ascii_msg: %d, ascii_len: %d cli_addr: %s cli_port: %d\n",
-                   i,
-                   ascii_len,
-                   cli_addr_str,
-                   htons(cli_addr.sin_port));
-            printf("message: %s\n", buffer);
-
-            // check if answer is needed
-            if (use_answer)
-            {
-                char buff_to_send [30];
-                strcpy(buff_to_send, "OK");
-                int rc = sendto(sockfd, buff_to_send, 3, 0,
-                                (struct sockaddr *) &cli_addr,
-                                sizeof(cli_addr));
-
-                if (rc < 0)
-                    printf("error in answer\n");
-                
-            }            
-        }
-        else
-        {
-            printf("binary_msg: %d, sock_len: %d cli_addr: %s cli_port: %d\n",
-                   i,
-                   sock_len,
-                   cli_addr_str,
-                   htons(cli_addr.sin_port));
-
-            printf("message: 0x");
-            for (int j = 0; j < sock_len; j++)
-                printf("%02x", buffer[j]);
-
-            printf("\n");
+            char buff_to_send [30];
+            strcpy(buff_to_send, "OK");
+            int rc = sendto(sockfd, buff_to_send, 3, 0,
+                            (struct sockaddr *) &cli_addr,
+                            sizeof(cli_addr));
             
-            // check if answer is needed
-            if (use_answer)
-            {
-                char buff_to_send [30];
-                strcpy(buff_to_send, "OK");
-                int rc = sendto(sockfd, buff_to_send, 3, 0,
-                                (struct sockaddr *) &cli_addr,
-                                sizeof(cli_addr));
-
-                if (rc < 0)
-                    printf("error in answer\n");
-                
-            }
+            if (rc < 0)
+                printf("error in answer\n");
+            
+        }
+        else if (use_answer == SERVER_ANSWER_LOOPBACK)
+        {
+            int rc = sendto(sockfd, buffer, ascii_len, 0,
+                            (struct sockaddr *) &cli_addr,
+                            sizeof(cli_addr));
+            
+            if (rc < 0)
+                printf("error in answer\n");
+            
         }
     }
 

@@ -14,6 +14,13 @@
 #include <stdlib.h>
 
 // Module Private Types Constants and Macros -----------------------------------
+//  sending models
+// #define SENDING_IN_CHUNKS    // ascii data chunk by chunk
+// #define SENDING_WITH_INNER_LINE_FEED     // ascii data same chunk with line feed
+// #define SENDING_WITH_TRAILING_LINE_FEED     // ascii data same chunk with spaces and trailing line feed
+#define SENDING_WITHOUT_TRAILING_LINE_FEED     // ascii data same chunk with spaces no line feed
+// #define SENDING_WITHOUT_TRAILING_LINE_FEED_SPACE     // ascii data same chunk with spaces no line feed end space
+
 // argc know positions
 #define ASCII_OR_BIN_POS    1
 #define SERVER_IP    2
@@ -112,6 +119,13 @@ int main (int argc, char *argv[])
         unsigned char b = 0;
         unsigned char buff_to_send [30] = { 0 };
         int buff_len = strlen(argv[BINARY_DATA_POS]);
+
+        // check even number
+        // if (buff_len % 2 != 0)
+        // {
+        //     printf("data error, only even numbers allowed to assembly the nibbles!\n");
+        //     _exit(1);
+        // }
         
         // check only numbers or a to f
         for (int ii = 0; ii < buff_len; ii++)
@@ -125,22 +139,41 @@ int main (int argc, char *argv[])
             }
             else
             {
-                printf("data error, only 0 to 9 or a to f permited!");
+                printf("data error, only 0 to 9 or a to f permited!\n");
                 _exit(1);
             }
         }
 
         // show the numbers and set the buffer
+        int nibble = 0;
+        int nibble_cnt = 0;
+
+        // always even numbers
+        if (buff_len % 2 != 0)
+            buff_len++;
+
         for (int ii = 0; ii < buff_len; ii++)
         {
             a = *(argv[BINARY_DATA_POS] + ii);
             printf("%c ", a);
             b = atoi(&a);
-            buff_to_send[ii] = b;
+            if (!nibble)
+            {
+                buff_to_send[nibble_cnt] = b;
+                buff_to_send[nibble_cnt] <<= 4;
+                nibble = 1;
+            }
+            else
+            {
+                buff_to_send[nibble_cnt] &= 0xf0;                                
+                buff_to_send[nibble_cnt] |= b;
+                nibble = 0;
+                nibble_cnt++;
+            }
         }
 
-        printf("sending binary data bytes: %d\n", buff_len);
-        rc = sendto(sd, buff_to_send, buff_len, 0,
+        printf("sending binary data bytes: %d\n", nibble_cnt);
+        rc = sendto(sd, buff_to_send, nibble_cnt, 0,
                     (struct sockaddr *) &remoteServAddr,
                     sizeof(remoteServAddr));
         
@@ -161,7 +194,7 @@ int main (int argc, char *argv[])
     {
         // wait for server answer?
         int seconds = 0;
-        unsigned char buff_to_send [30] = { 0 };
+        unsigned char buff_to_send [300] = { 0 };
         int max_argc_index = argc;
 
         if ((strlen(argv[argc - 1]) <= 3))    //no more than three digits
@@ -171,6 +204,7 @@ int main (int argc, char *argv[])
                 max_argc_index--;
         }
 
+#ifdef SENDING_IN_CHUNKS
         for(i = ASCII_DATA_POS; i < max_argc_index; i++)
         {
             rc = sendto(sd, argv[i], strlen(argv[i])+1, 0,
@@ -183,7 +217,84 @@ int main (int argc, char *argv[])
                 _exit(1);
             }
         }
+#endif
 
+#ifdef SENDING_WITH_INNER_LINE_FEED        
+        for(i = ASCII_DATA_POS; i < max_argc_index; i++)
+        {
+            strcat(buff_to_send, argv[i]);
+            strcat(buff_to_send, "\r\n");
+        }
+
+        rc = sendto(sd, buff_to_send, strlen(buff_to_send) + 1, 0,
+                    (struct sockaddr *) &remoteServAddr,
+                    sizeof(remoteServAddr));
+        if(rc<0)
+        {
+            printf("%s: cannot send data %d \n",argv[0], i-1);
+            close(sd);
+            _exit(1);
+        }
+#endif
+
+#ifdef SENDING_WITH_TRAILING_LINE_FEED
+        for(i = ASCII_DATA_POS; i < max_argc_index; i++)
+        {
+            strcat(buff_to_send, argv[i]);
+            if (i < (max_argc_index - 1))
+                strcat(buff_to_send, " ");
+        }        
+        strcat(buff_to_send, "\r\n");
+        
+        rc = sendto(sd, buff_to_send, strlen(buff_to_send) + 1, 0,
+                    (struct sockaddr *) &remoteServAddr,
+                    sizeof(remoteServAddr));
+        if(rc<0)
+        {
+            printf("%s: cannot send data %d \n",argv[0], i-1);
+            close(sd);
+            _exit(1);
+        }
+#endif
+
+#ifdef SENDING_WITHOUT_TRAILING_LINE_FEED
+        for(i = ASCII_DATA_POS; i < max_argc_index; i++)
+        {
+            strcat(buff_to_send, argv[i]);
+            if (i < (max_argc_index - 1))
+                strcat(buff_to_send, " ");
+        }        
+        
+        // rc = sendto(sd, buff_to_send, strlen(buff_to_send) + 1, 0,
+        rc = sendto(sd, buff_to_send, strlen(buff_to_send), 0,                    
+                    (struct sockaddr *) &remoteServAddr,
+                    sizeof(remoteServAddr));
+        if(rc<0)
+        {
+            printf("%s: cannot send data %d \n",argv[0], i-1);
+            close(sd);
+            _exit(1);
+        }
+#endif
+
+#ifdef SENDING_WITHOUT_TRAILING_LINE_FEED_SPACE
+        for(i = ASCII_DATA_POS; i < max_argc_index; i++)
+        {
+            strcat(buff_to_send, argv[i]);
+            strcat(buff_to_send, " ");
+        }        
+        
+        rc = sendto(sd, buff_to_send, strlen(buff_to_send) + 1, 0,
+                    (struct sockaddr *) &remoteServAddr,
+                    sizeof(remoteServAddr));
+        if(rc<0)
+        {
+            printf("%s: cannot send data %d \n",argv[0], i-1);
+            close(sd);
+            _exit(1);
+        }
+#endif
+        
         // wait for server
         if ((seconds > 0) && (seconds < 100))
             get_answer(sd, seconds, buff_to_send, sizeof(buff_to_send));
